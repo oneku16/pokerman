@@ -19,7 +19,7 @@ class TestConfirmBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
 
         result = await confirm_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
@@ -35,7 +35,7 @@ class TestConfirmBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
 
         with pytest.raises(UnauthorizedActionError):
@@ -46,7 +46,7 @@ class TestConfirmBuyIn:
         room_a = await make_room(uow, code="1111", admin_telegram_id=1, name="Room A")
         assert room_a.id is not None
         await add_player(uow, room_a, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room_a.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room_a.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
 
         await make_room(uow, code="2222", admin_telegram_id=3, name="Room B")
@@ -59,7 +59,7 @@ class TestConfirmBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
 
@@ -79,7 +79,7 @@ class TestRejectBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
 
         result = await reject_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
@@ -92,7 +92,7 @@ class TestRejectBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
 
         with pytest.raises(UnauthorizedActionError):
@@ -103,7 +103,7 @@ class TestRejectBuyIn:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
         await reject_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
 

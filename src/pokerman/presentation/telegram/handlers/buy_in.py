@@ -1,4 +1,5 @@
 from aiogram import Bot, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from pokerman.application.use_cases._buy_in_lookup import BuyInDecision
@@ -6,9 +7,12 @@ from pokerman.application.use_cases.confirm_buy_in import confirm_buy_in
 from pokerman.application.use_cases.get_room import get_room
 from pokerman.application.use_cases.reject_buy_in import reject_buy_in
 from pokerman.application.use_cases.request_buy_in import request_buy_in
+from pokerman.domain.entities import PokerRoom
 from pokerman.domain.errors import DomainError
 from pokerman.presentation.telegram.callback_data import (
+    BuyInAmountCallback,
     BuyInCallback,
+    BuyInOtherCallback,
     ConfirmBuyInCallback,
     PaidCallback,
     RejectBuyInCallback,
@@ -20,13 +24,19 @@ from pokerman.presentation.telegram.formatting import (
     format_buy_in_notification_for_admin,
     format_buy_in_prompt,
 )
-from pokerman.presentation.telegram.keyboards import admin_confirm_keyboard, buy_in_keyboard
+from pokerman.presentation.telegram.keyboards import (
+    admin_confirm_keyboard,
+    buy_in_amount_keyboard,
+    buy_in_keyboard,
+)
+from pokerman.presentation.telegram.parsing import parse_positive_amount
+from pokerman.presentation.telegram.states import BuyInStates
 
 router = Router(name="buy_in")
 
 
 @router.callback_query(BuyInCallback.filter())
-async def show_buy_in_prompt(
+async def show_amount_picker(
     callback: CallbackQuery, callback_data: BuyInCallback, deps: Deps
 ) -> None:
     assert isinstance(callback.message, Message)
@@ -37,14 +47,68 @@ async def show_buy_in_prompt(
         await callback.answer(describe_error(error), show_alert=True)
         return
 
-    keyboard = buy_in_keyboard(callback_data.room_id)
-    text = format_buy_in_prompt(room, room.default_buy_in_amount)
+    await callback.message.answer(
+        "How much are you buying in for?",
+        reply_markup=buy_in_amount_keyboard(callback_data.room_id),
+    )
+    await callback.answer()
+
+
+@router.callback_query(BuyInAmountCallback.filter())
+async def handle_preset_amount(
+    callback: CallbackQuery, callback_data: BuyInAmountCallback, deps: Deps
+) -> None:
+    assert isinstance(callback.message, Message)
+    try:
+        room = await get_room(deps.uow(), room_id=callback_data.room_id)
+        room.ensure_active()
+    except DomainError as error:
+        await callback.answer(describe_error(error), show_alert=True)
+        return
+
+    await _show_payment_step(callback.message, room, callback_data.amount)
+    await callback.answer()
+
+
+@router.callback_query(BuyInOtherCallback.filter())
+async def start_custom_amount(
+    callback: CallbackQuery, callback_data: BuyInOtherCallback, state: FSMContext
+) -> None:
+    assert isinstance(callback.message, Message)
+    await state.update_data(room_id=callback_data.room_id)
+    await state.set_state(BuyInStates.waiting_for_custom_amount)
+    await callback.message.answer("Enter your buy-in amount.")
+    await callback.answer()
+
+
+@router.message(BuyInStates.waiting_for_custom_amount)
+async def receive_custom_amount(message: Message, state: FSMContext, deps: Deps) -> None:
+    amount = parse_positive_amount(message.text or "")
+    if amount is None:
+        await message.answer("Please send a positive whole number, e.g. 500.")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    try:
+        room = await get_room(deps.uow(), room_id=data["room_id"])
+        room.ensure_active()
+    except DomainError as error:
+        await message.answer(describe_error(error))
+        return
+
+    await _show_payment_step(message, room, amount)
+
+
+async def _show_payment_step(message: Message, room: PokerRoom, amount: int) -> None:
+    assert room.id is not None
+    keyboard = buy_in_keyboard(room.id, amount)
+    text = format_buy_in_prompt(room, amount)
     if room.qr_file_id:
-        await callback.message.answer_photo(room.qr_file_id, caption=text, reply_markup=keyboard)
+        await message.answer_photo(room.qr_file_id, caption=text, reply_markup=keyboard)
     else:
         text += "\n\n(The admin hasn't uploaded a payment QR yet.)"
-        await callback.message.answer(text, reply_markup=keyboard)
-    await callback.answer()
+        await message.answer(text, reply_markup=keyboard)
 
 
 @router.callback_query(PaidCallback.filter())
@@ -54,7 +118,10 @@ async def handle_paid(
     assert callback.from_user is not None
     try:
         result = await request_buy_in(
-            deps.uow(), room_id=callback_data.room_id, player_telegram_id=callback.from_user.id
+            deps.uow(),
+            room_id=callback_data.room_id,
+            player_telegram_id=callback.from_user.id,
+            amount=callback_data.amount,
         )
     except DomainError as error:
         await callback.answer(describe_error(error), show_alert=True)

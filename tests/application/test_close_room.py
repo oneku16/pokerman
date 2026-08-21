@@ -34,7 +34,7 @@ class TestCloseRoom:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        pending = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        pending = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
 
         with pytest.raises(RoomHasPendingBuyInsError) as exc_info:
             await close_room(uow, room_id=room.id, admin_telegram_id=1)
@@ -46,7 +46,7 @@ class TestCloseRoom:
         room = await make_room(uow, admin_telegram_id=1)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        pending = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        pending = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert pending.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=pending.buy_in.id, admin_telegram_id=1)
 

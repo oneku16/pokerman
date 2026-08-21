@@ -16,8 +16,8 @@ class TestGetPlayerHistory:
         room = await make_room(uow, admin_telegram_id=1, default_buy_in_amount=500)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        first = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
-        second = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        first = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
+        second = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=600)
         assert first.buy_in.id is not None
         assert second.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=first.buy_in.id, admin_telegram_id=1)
@@ -28,7 +28,7 @@ class TestGetPlayerHistory:
         )
 
         assert len(history.buy_ins) == 2
-        assert history.confirmed_total == 1000
+        assert history.confirmed_total == 1100
         assert all(b.status == BuyInStatus.CONFIRMED for b in history.buy_ins)
 
     async def test_history_includes_all_statuses_but_totals_only_confirmed(self) -> None:
@@ -36,9 +36,9 @@ class TestGetPlayerHistory:
         room = await make_room(uow, admin_telegram_id=1, default_buy_in_amount=500)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        confirmed = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
-        rejected = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
-        await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        confirmed = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
+        rejected = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=600)
+        await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=700)
         assert confirmed.buy_in.id is not None
         assert rejected.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=confirmed.buy_in.id, admin_telegram_id=1)

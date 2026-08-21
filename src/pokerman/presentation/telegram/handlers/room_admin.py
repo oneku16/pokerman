@@ -22,17 +22,10 @@ from pokerman.presentation.telegram.keyboards import (
     close_room_confirm_keyboard,
     room_dashboard_keyboard,
 )
+from pokerman.presentation.telegram.parsing import parse_positive_amount
 from pokerman.presentation.telegram.states import CreateRoomStates, RoomSettingsStates
 
 router = Router(name="room_admin")
-
-
-def _parse_positive_amount(text: str) -> int | None:
-    try:
-        amount = int(text.strip())
-    except ValueError:
-        return None
-    return amount if amount > 0 else None
 
 
 @router.callback_query(NewRoomCallback.filter())
@@ -57,7 +50,7 @@ async def receive_room_name(message: Message, state: FSMContext) -> None:
 @router.message(CreateRoomStates.waiting_for_buy_in)
 async def receive_default_buy_in(message: Message, state: FSMContext, deps: Deps) -> None:
     assert message.from_user is not None
-    amount = _parse_positive_amount(message.text or "")
+    amount = parse_positive_amount(message.text or "")
     if amount is None:
         await message.answer("Please send a positive whole number, e.g. 500.")
         return
@@ -129,7 +122,7 @@ async def start_set_default_buy_in(
 @router.message(RoomSettingsStates.waiting_for_new_buy_in)
 async def receive_new_default_buy_in(message: Message, state: FSMContext, deps: Deps) -> None:
     assert message.from_user is not None
-    amount = _parse_positive_amount(message.text or "")
+    amount = parse_positive_amount(message.text or "")
     if amount is None:
         await message.answer("Please send a positive whole number, e.g. 500.")
         return

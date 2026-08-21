@@ -4,7 +4,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pokerman.domain.entities import PokerRoom
 from pokerman.domain.enums import RoomStatus
 from pokerman.presentation.telegram.callback_data import (
+    BuyInAmountCallback,
     BuyInCallback,
+    BuyInOtherCallback,
     CloseRoomAskCallback,
     CloseRoomConfirmedCallback,
     ConfirmBuyInCallback,
@@ -17,6 +19,8 @@ from pokerman.presentation.telegram.callback_data import (
     SetDefaultBuyInCallback,
     SetQrCallback,
 )
+
+PRESET_BUY_IN_AMOUNTS = (200, 400, 500, 600, 1000)
 
 
 def main_menu_keyboard(rooms: list[PokerRoom]) -> InlineKeyboardMarkup:
@@ -50,9 +54,20 @@ def room_dashboard_keyboard(room: PokerRoom, *, is_admin: bool) -> InlineKeyboar
     return builder.as_markup()
 
 
-def buy_in_keyboard(room_id: int) -> InlineKeyboardMarkup:
+def buy_in_amount_keyboard(room_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="I Paid", callback_data=PaidCallback(room_id=room_id))
+    for amount in PRESET_BUY_IN_AMOUNTS:
+        builder.button(
+            text=str(amount), callback_data=BuyInAmountCallback(room_id=room_id, amount=amount)
+        )
+    builder.button(text="Other", callback_data=BuyInOtherCallback(room_id=room_id))
+    builder.adjust(3, 2, 1)
+    return builder.as_markup()
+
+
+def buy_in_keyboard(room_id: int, amount: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="I Paid", callback_data=PaidCallback(room_id=room_id, amount=amount))
     builder.adjust(1)
     return builder.as_markup()
 

@@ -9,3 +9,7 @@ class CreateRoomStates(StatesGroup):
 class RoomSettingsStates(StatesGroup):
     waiting_for_new_qr = State()
     waiting_for_new_buy_in = State()
+
+
+class BuyInStates(StatesGroup):
+    waiting_for_custom_amount = State()

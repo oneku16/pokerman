@@ -18,9 +18,9 @@ class TestGetRoomDashboard:
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
 
-        confirmed = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
-        rejected = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
-        await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        confirmed = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
+        rejected = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=600)
+        await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=700)
         assert confirmed.buy_in.id is not None
         assert rejected.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=confirmed.buy_in.id, admin_telegram_id=1)
@@ -44,7 +44,9 @@ class TestGetRoomDashboard:
         await add_player(uow, room, telegram_id=3, display_name="Nursultan")
 
         for telegram_id in (2, 3):
-            requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=telegram_id)
+            requested = await request_buy_in(
+                uow, room_id=room.id, player_telegram_id=telegram_id, amount=500
+            )
             assert requested.buy_in.id is not None
             await confirm_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
 
@@ -101,7 +103,7 @@ class TestGetRoomDashboard:
         room = await make_room(uow, admin_telegram_id=1, default_buy_in_amount=500)
         assert room.id is not None
         await add_player(uow, room, telegram_id=2, display_name="Azamat")
-        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2)
+        requested = await request_buy_in(uow, room_id=room.id, player_telegram_id=2, amount=500)
         assert requested.buy_in.id is not None
         await confirm_buy_in(uow, buy_in_id=requested.buy_in.id, admin_telegram_id=1)
         await close_room(uow, room_id=room.id, admin_telegram_id=1)

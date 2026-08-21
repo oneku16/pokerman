@@ -17,8 +17,18 @@ class BuyInCallback(CallbackData, prefix="buyin"):
     room_id: int
 
 
+class BuyInAmountCallback(CallbackData, prefix="buyinamt"):
+    room_id: int
+    amount: int
+
+
+class BuyInOtherCallback(CallbackData, prefix="buyinoth"):
+    room_id: int
+
+
 class PaidCallback(CallbackData, prefix="paid"):
     room_id: int
+    amount: int
 
 
 class ConfirmBuyInCallback(CallbackData, prefix="confirm"):

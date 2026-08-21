@@ -18,6 +18,16 @@ pytestmark = pytest.mark.integration
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
+def _first_buy_in(*, room_player_id: int, amount: int = 500) -> BuyIn:
+    return BuyIn.request(
+        room_player_id=room_player_id,
+        amount=amount,
+        is_first_buy_in=True,
+        default_amount=500,
+        now=NOW,
+    )
+
+
 class TestRoomLedgerQuery:
     async def test_player_totals_only_count_confirmed_buy_ins(
         self, session: AsyncSession, session_factory: async_sessionmaker[AsyncSession]
@@ -56,14 +66,14 @@ class TestRoomLedgerQuery:
         assert azamat_member.id is not None
 
         confirmed_1 = await buy_ins.add(
-            BuyIn.request(room_player_id=azamat_member.id, amount=500, now=NOW)
+            _first_buy_in(room_player_id=azamat_member.id)
         )
         confirmed_2 = await buy_ins.add(
-            BuyIn.request(room_player_id=azamat_member.id, amount=500, now=NOW)
+            _first_buy_in(room_player_id=azamat_member.id)
         )
-        await buy_ins.add(BuyIn.request(room_player_id=azamat_member.id, amount=500, now=NOW))
+        await buy_ins.add(_first_buy_in(room_player_id=azamat_member.id))
         rejected = await buy_ins.add(
-            BuyIn.request(room_player_id=azamat_member.id, amount=500, now=NOW)
+            _first_buy_in(room_player_id=azamat_member.id)
         )
         await session.flush()
         confirmed_1.confirm(decided_by_telegram_id=1, now=NOW)

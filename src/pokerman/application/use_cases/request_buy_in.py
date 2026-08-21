@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from pokerman.application.ports import UnitOfWork
 from pokerman.domain.entities import BuyIn, PokerRoom
+from pokerman.domain.enums import BuyInStatus
 from pokerman.domain.errors import NotRoomMemberError, RoomNotFoundError
 
 
@@ -17,7 +18,7 @@ async def request_buy_in(
     *,
     room_id: int,
     player_telegram_id: int,
-    amount: int | None = None,
+    amount: int,
 ) -> BuyInRequest:
     async with uow:
         room = await uow.rooms.get_by_id(room_id)
@@ -30,10 +31,15 @@ async def request_buy_in(
             raise NotRoomMemberError(f"user {player_telegram_id} has not joined room {room_id}")
         assert member.id is not None
 
+        prior = await uow.buy_ins.list_for_room_player(member.id)
+        is_first_buy_in = not any(b.status != BuyInStatus.REJECTED for b in prior)
+
         buy_in = await uow.buy_ins.add(
             BuyIn.request(
                 room_player_id=member.id,
-                amount=amount if amount is not None else room.default_buy_in_amount,
+                amount=amount,
+                is_first_buy_in=is_first_buy_in,
+                default_amount=room.default_buy_in_amount,
                 now=datetime.now(UTC),
             )
         )
