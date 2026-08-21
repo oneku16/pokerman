@@ -4,57 +4,38 @@ import pytest
 
 from pokerman.domain.entities import BuyIn
 from pokerman.domain.enums import BuyInStatus
-from pokerman.domain.errors import InvalidBuyInAmountError, InvalidBuyInStateError
+from pokerman.domain.errors import InvalidBuyInStateError
 
 REQUESTED = datetime(2026, 1, 1, tzinfo=UTC)
 DECIDED = datetime(2026, 1, 1, hour=1, tzinfo=UTC)
-DEFAULT_AMOUNT = 500
 
 
 def make_buy_in(**overrides: object) -> BuyIn:
-    defaults: dict[str, object] = {
-        "room_player_id": 1,
-        "amount": DEFAULT_AMOUNT,
-        "is_first_buy_in": True,
-        "default_amount": DEFAULT_AMOUNT,
-        "now": REQUESTED,
-    }
+    defaults: dict[str, object] = {"room_player_id": 1, "amount": 500, "now": REQUESTED}
     defaults.update(overrides)
     return BuyIn.request(**defaults)  # type: ignore[arg-type]
 
 
 class TestBuyInRequest:
-    def test_first_buy_in_matching_default_starts_pending(self) -> None:
-        buy_in = make_buy_in(is_first_buy_in=True, amount=DEFAULT_AMOUNT)
+    def test_request_starts_pending(self) -> None:
+        buy_in = make_buy_in()
 
         assert buy_in.id is None
-        assert buy_in.amount == DEFAULT_AMOUNT
         assert buy_in.status == BuyInStatus.PENDING
         assert buy_in.requested_at == REQUESTED
         assert buy_in.decided_at is None
         assert buy_in.decided_by_telegram_id is None
 
-    @pytest.mark.parametrize("amount", [1, DEFAULT_AMOUNT - 100, DEFAULT_AMOUNT + 100])
-    def test_first_buy_in_accepts_any_positive_amount(self, amount: int) -> None:
-        buy_in = make_buy_in(is_first_buy_in=True, amount=amount)
+    @pytest.mark.parametrize("amount", [1, 200, 5000])
+    def test_accepts_any_positive_amount(self, amount: int) -> None:
+        buy_in = make_buy_in(amount=amount)
 
         assert buy_in.amount == amount
 
-    def test_subsequent_buy_in_greater_than_default_is_allowed(self) -> None:
-        buy_in = make_buy_in(is_first_buy_in=False, amount=DEFAULT_AMOUNT + 100)
-
-        assert buy_in.amount == DEFAULT_AMOUNT + 100
-
-    def test_subsequent_buy_in_equal_to_default_is_rejected(self) -> None:
-        with pytest.raises(InvalidBuyInAmountError) as exc_info:
-            make_buy_in(is_first_buy_in=False, amount=DEFAULT_AMOUNT)
-
-        assert exc_info.value.default_amount == DEFAULT_AMOUNT
-        assert exc_info.value.amount == DEFAULT_AMOUNT
-
-    def test_subsequent_buy_in_less_than_default_is_rejected(self) -> None:
-        with pytest.raises(InvalidBuyInAmountError):
-            make_buy_in(is_first_buy_in=False, amount=DEFAULT_AMOUNT - 100)
+    @pytest.mark.parametrize("amount", [0, -1, -500])
+    def test_rejects_non_positive_amount(self, amount: int) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            make_buy_in(amount=amount)
 
     def test_direct_construction_rejects_non_positive_amount(self) -> None:
         with pytest.raises(ValueError, match="positive"):

@@ -2,7 +2,6 @@ from pokerman.domain.errors import (
     BuyInNotFoundError,
     DomainError,
     DuplicateMembershipError,
-    InvalidBuyInAmountError,
     InvalidBuyInStateError,
     NotRoomMemberError,
     RoomClosedError,
@@ -28,6 +27,4 @@ def describe_error(error: DomainError) -> str:
     if isinstance(error, RoomHasPendingBuyInsError):
         ids = ", ".join(f"#{i}" for i in error.pending_buy_in_ids)
         return f"Resolve these pending buy-ins before closing the room: {ids}"
-    if isinstance(error, InvalidBuyInAmountError):
-        return f"Buy-ins after your first must be more than {error.default_amount}."
     return _MESSAGES.get(type(error), "Something went wrong. Please try again.")

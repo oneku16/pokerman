@@ -26,13 +26,6 @@ class InvalidBuyInStateError(DomainError):
     pass
 
 
-class InvalidBuyInAmountError(DomainError):
-    def __init__(self, *, amount: int, default_amount: int) -> None:
-        self.amount = amount
-        self.default_amount = default_amount
-        super().__init__(f"buy-in must be greater than {default_amount}, got {amount}")
-
-
 class UnauthorizedActionError(DomainError):
     pass
 

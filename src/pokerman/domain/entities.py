@@ -4,11 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from pokerman.domain.enums import BuyInStatus, RoomStatus
-from pokerman.domain.errors import (
-    InvalidBuyInAmountError,
-    InvalidBuyInStateError,
-    RoomClosedError,
-)
+from pokerman.domain.errors import InvalidBuyInStateError, RoomClosedError
 from pokerman.domain.value_objects import RoomCode
 
 
@@ -62,17 +58,7 @@ class BuyIn:
             raise ValueError("buy-in amount must be positive")
 
     @classmethod
-    def request(
-        cls,
-        *,
-        room_player_id: int,
-        amount: int,
-        is_first_buy_in: bool,
-        default_amount: int,
-        now: datetime,
-    ) -> BuyIn:
-        if not is_first_buy_in and amount <= default_amount:
-            raise InvalidBuyInAmountError(amount=amount, default_amount=default_amount)
+    def request(cls, *, room_player_id: int, amount: int, now: datetime) -> BuyIn:
         return cls(
             id=None,
             room_player_id=room_player_id,

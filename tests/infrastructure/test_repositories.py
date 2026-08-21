@@ -19,14 +19,8 @@ pytestmark = pytest.mark.integration
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
-def _first_buy_in(*, room_player_id: int, amount: int = 500) -> BuyIn:
-    return BuyIn.request(
-        room_player_id=room_player_id,
-        amount=amount,
-        is_first_buy_in=True,
-        default_amount=500,
-        now=NOW,
-    )
+def _make_buy_in(*, room_player_id: int, amount: int = 500) -> BuyIn:
+    return BuyIn.request(room_player_id=room_player_id, amount=amount, now=NOW)
 
 
 async def _make_room(
@@ -278,7 +272,7 @@ class TestBuyInRepository:
         assert member.id is not None
         repo = SqlAlchemyBuyInRepository(session)
 
-        buy_in = await repo.add(_first_buy_in(room_player_id=member.id))
+        buy_in = await repo.add(_make_buy_in(room_player_id=member.id))
         await session.flush()
         assert buy_in.id is not None
 
@@ -292,7 +286,7 @@ class TestBuyInRepository:
         member = await _make_member(session, room, telegram_id=2)
         assert member.id is not None
         repo = SqlAlchemyBuyInRepository(session)
-        buy_in = await repo.add(_first_buy_in(room_player_id=member.id))
+        buy_in = await repo.add(_make_buy_in(room_player_id=member.id))
         await session.flush()
         assert buy_in.id is not None
 
@@ -318,9 +312,9 @@ class TestBuyInRepository:
         assert member_b.id is not None
         repo = SqlAlchemyBuyInRepository(session)
 
-        pending_a = await repo.add(_first_buy_in(room_player_id=member_a.id))
-        confirmed_a = await repo.add(_first_buy_in(room_player_id=member_a.id))
-        await repo.add(_first_buy_in(room_player_id=member_b.id))
+        pending_a = await repo.add(_make_buy_in(room_player_id=member_a.id))
+        confirmed_a = await repo.add(_make_buy_in(room_player_id=member_a.id))
+        await repo.add(_make_buy_in(room_player_id=member_b.id))
         await session.flush()
         confirmed_a.confirm(decided_by_telegram_id=1, now=NOW)
         await repo.save(confirmed_a)
@@ -335,8 +329,8 @@ class TestBuyInRepository:
         member = await _make_member(session, room, telegram_id=2)
         assert member.id is not None
         repo = SqlAlchemyBuyInRepository(session)
-        first = await repo.add(_first_buy_in(room_player_id=member.id))
-        second = await repo.add(_first_buy_in(room_player_id=member.id))
+        first = await repo.add(_make_buy_in(room_player_id=member.id))
+        second = await repo.add(_make_buy_in(room_player_id=member.id))
         await session.flush()
         second.reject(decided_by_telegram_id=1, now=NOW)
         await repo.save(second)
