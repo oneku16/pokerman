@@ -34,14 +34,11 @@ class TestBuyInRequest:
         assert buy_in.decided_at is None
         assert buy_in.decided_by_telegram_id is None
 
-    @pytest.mark.parametrize("amount", [DEFAULT_AMOUNT - 1, DEFAULT_AMOUNT + 1, 0])
-    def test_first_buy_in_rejects_amount_other_than_default(self, amount: int) -> None:
-        with pytest.raises(InvalidBuyInAmountError) as exc_info:
-            make_buy_in(is_first_buy_in=True, amount=amount)
+    @pytest.mark.parametrize("amount", [1, DEFAULT_AMOUNT - 100, DEFAULT_AMOUNT + 100])
+    def test_first_buy_in_accepts_any_positive_amount(self, amount: int) -> None:
+        buy_in = make_buy_in(is_first_buy_in=True, amount=amount)
 
-        assert exc_info.value.is_first_buy_in is True
-        assert exc_info.value.default_amount == DEFAULT_AMOUNT
-        assert exc_info.value.amount == amount
+        assert buy_in.amount == amount
 
     def test_subsequent_buy_in_greater_than_default_is_allowed(self) -> None:
         buy_in = make_buy_in(is_first_buy_in=False, amount=DEFAULT_AMOUNT + 100)
@@ -52,7 +49,8 @@ class TestBuyInRequest:
         with pytest.raises(InvalidBuyInAmountError) as exc_info:
             make_buy_in(is_first_buy_in=False, amount=DEFAULT_AMOUNT)
 
-        assert exc_info.value.is_first_buy_in is False
+        assert exc_info.value.default_amount == DEFAULT_AMOUNT
+        assert exc_info.value.amount == DEFAULT_AMOUNT
 
     def test_subsequent_buy_in_less_than_default_is_rejected(self) -> None:
         with pytest.raises(InvalidBuyInAmountError):

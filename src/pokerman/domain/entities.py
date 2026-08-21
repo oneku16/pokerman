@@ -71,11 +71,8 @@ class BuyIn:
         default_amount: int,
         now: datetime,
     ) -> BuyIn:
-        valid = amount == default_amount if is_first_buy_in else amount > default_amount
-        if not valid:
-            raise InvalidBuyInAmountError(
-                amount=amount, is_first_buy_in=is_first_buy_in, default_amount=default_amount
-            )
+        if not is_first_buy_in and amount <= default_amount:
+            raise InvalidBuyInAmountError(amount=amount, default_amount=default_amount)
         return cls(
             id=None,
             room_player_id=room_player_id,

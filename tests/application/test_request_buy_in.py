@@ -15,7 +15,7 @@ from tests.application.helpers import add_player, make_room
 
 
 class TestRequestBuyIn:
-    async def test_first_buy_in_must_equal_default_amount(self) -> None:
+    async def test_first_buy_in_accepts_the_default_amount(self) -> None:
         uow = FakeUnitOfWork()
         room = await make_room(uow, default_buy_in_amount=500)
         assert room.id is not None
@@ -27,13 +27,15 @@ class TestRequestBuyIn:
         assert result.room.id == room.id
         assert uow.committed is True
 
-    async def test_first_buy_in_rejects_amount_other_than_default(self) -> None:
+    async def test_first_buy_in_accepts_any_other_positive_amount(self) -> None:
         uow = FakeUnitOfWork()
         room = await make_room(uow, default_buy_in_amount=500)
         assert room.id is not None
 
-        with pytest.raises(InvalidBuyInAmountError):
-            await request_buy_in(uow, room_id=room.id, player_telegram_id=1, amount=1000)
+        result = await request_buy_in(uow, room_id=room.id, player_telegram_id=1, amount=1000)
+
+        assert result.buy_in.amount == 1000
+        assert result.buy_in.status == BuyInStatus.PENDING
 
     async def test_second_buy_in_must_exceed_default_amount(self) -> None:
         uow = FakeUnitOfWork()
