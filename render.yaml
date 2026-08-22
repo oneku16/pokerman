@@ -13,5 +13,9 @@ services:
         sync: false
       - key: TELEGRAM_BOT_USERNAME
         value: pokermankg_bot
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: PUBLIC_BASE_URL
+        value: https://pokerman-s2x3.onrender.com
       - key: DEFAULT_CURRENCY
         value: KGS

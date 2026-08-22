@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str
     telegram_bot_token: str
     telegram_bot_username: str
+    telegram_webhook_secret: str
+    public_base_url: str
     default_currency: str = "KGS"
 
     @field_validator("database_url")
@@ -17,3 +19,8 @@ class Settings(BaseSettings):
             if value.startswith(prefix):
                 return "postgresql+asyncpg://" + value[len(prefix) :]
         return value
+
+    @field_validator("public_base_url")
+    @classmethod
+    def _strip_trailing_slash(cls, value: str) -> str:
+        return value.rstrip("/")

@@ -1,13 +1,15 @@
-import asyncio
-import contextlib
+import hmac
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from aiogram.types import Update
+from fastapi import FastAPI, Header, HTTPException, Request
 
 from pokerman.infrastructure.config import Settings
 from pokerman.infrastructure.db.session import create_engine, create_session_factory
 from pokerman.presentation.telegram.bot import build_bot, build_dispatcher
+
+WEBHOOK_PATH = "/telegram/webhook"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -23,13 +25,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             bot_username=settings.telegram_bot_username,
             default_currency=settings.default_currency,
         )
-        polling_task = asyncio.create_task(dispatcher.start_polling(bot, handle_signals=False))
+        app.state.bot = bot
+        app.state.dispatcher = dispatcher
+
+        await bot.set_webhook(
+            url=f"{settings.public_base_url}{WEBHOOK_PATH}",
+            secret_token=settings.telegram_webhook_secret,
+        )
         try:
             yield
         finally:
-            polling_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await polling_task
             await bot.session.close()
             await engine.dispose()
 
@@ -37,6 +42,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.post(WEBHOOK_PATH)
+    async def telegram_webhook(
+        request: Request,
+        x_telegram_bot_api_secret_token: str | None = Header(default=None),
+    ) -> dict[str, str]:
+        if not hmac.compare_digest(
+            x_telegram_bot_api_secret_token or "", settings.telegram_webhook_secret
+        ):
+            raise HTTPException(status_code=401, detail="invalid secret token")
+
+        bot = request.app.state.bot
+        dispatcher = request.app.state.dispatcher
+        update = Update.model_validate(await request.json(), context={"bot": bot})
+        await dispatcher.feed_update(bot, update)
         return {"status": "ok"}
 
     return app
