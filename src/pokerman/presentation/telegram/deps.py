@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from pokerman.infrastructure.db.player_statistics_query import SqlAlchemyPlayerStatisticsQuery
 from pokerman.infrastructure.db.room_ledger_query import SqlAlchemyRoomLedgerQuery
 from pokerman.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from pokerman.infrastructure.room_code_generator import SqlAlchemyRoomCodeGenerator
@@ -21,3 +22,6 @@ class Deps:
 
     def ledger_query(self) -> SqlAlchemyRoomLedgerQuery:
         return SqlAlchemyRoomLedgerQuery(self.session_factory)
+
+    def stats_query(self) -> SqlAlchemyPlayerStatisticsQuery:
+        return SqlAlchemyPlayerStatisticsQuery(self.session_factory)

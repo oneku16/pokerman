@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 from types import TracebackType
 
-from pokerman.application.read_models import PlayerLedgerRow
+from pokerman.application.read_models import PlayerLedgerRow, PlayerStatistics
 from pokerman.domain.entities import BuyIn, PokerRoom, RoomPlayer, User
 from pokerman.domain.enums import BuyInStatus, RoomStatus
 from pokerman.domain.errors import RoomCodeExhaustedError
@@ -100,6 +100,10 @@ class FakeRoomPlayerRepository:
     async def list_for_room(self, room_id: int) -> list[RoomPlayer]:
         return [rp for rp in self._db.room_players.values() if rp.room_id == room_id]
 
+    async def save(self, member: RoomPlayer) -> None:
+        assert member.id is not None
+        self._db.room_players[member.id] = member
+
 
 class FakeBuyInRepository:
     def __init__(self, db: FakeDatabase) -> None:
@@ -179,6 +183,65 @@ class FakeRoomLedgerQuery:
                 )
             )
         return rows
+
+
+class FakePlayerStatisticsQuery:
+    def __init__(self, db: FakeDatabase) -> None:
+        self._db = db
+
+    async def get_statistics(self, telegram_id: int) -> PlayerStatistics:
+        members = [
+            rp for rp in self._db.room_players.values() if rp.user_telegram_id == telegram_id
+        ]
+        games_played = len(
+            {
+                rp.room_id
+                for rp in members
+                if self._db.rooms.get(rp.room_id) is not None
+                and self._db.rooms[rp.room_id].status == RoomStatus.CLOSED
+            }
+        )
+
+        confirmed_by_room_player: dict[int, int] = {}
+        for buy_in in self._db.buy_ins.values():
+            if buy_in.status == BuyInStatus.CONFIRMED:
+                confirmed_by_room_player[buy_in.room_player_id] = (
+                    confirmed_by_room_player.get(buy_in.room_player_id, 0) + buy_in.amount
+                )
+
+        total_spent = 0
+        total_buy_in_count = 0
+        for member in members:
+            assert member.id is not None
+            total_spent += confirmed_by_room_player.get(member.id, 0)
+            total_buy_in_count += sum(
+                1
+                for b in self._db.buy_ins.values()
+                if b.room_player_id == member.id and b.status == BuyInStatus.CONFIRMED
+            )
+
+        total_cashed_out = 0
+        net_result = 0
+        for member in members:
+            if member.final_chip_count is None:
+                continue
+            assert member.id is not None
+            spent_here = confirmed_by_room_player.get(member.id, 0)
+            total_cashed_out += member.final_chip_count
+            net_result += member.final_chip_count - spent_here
+
+        user = self._db.users.get(telegram_id)
+        display_name = user.display_name if user is not None else str(telegram_id)
+
+        return PlayerStatistics(
+            telegram_id=telegram_id,
+            display_name=display_name,
+            games_played=games_played,
+            total_buy_in_count=total_buy_in_count,
+            total_spent=total_spent,
+            total_cashed_out=total_cashed_out,
+            net_result=net_result,
+        )
 
 
 class FakeUnitOfWork:

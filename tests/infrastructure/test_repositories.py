@@ -86,7 +86,7 @@ class TestUserRepository:
         )
         await session.flush()
 
-        user.refresh_profile(username="new", display_name="New")
+        user.refresh_profile(username="new")
         await repo.save(user)
         await session.flush()
         session.expire_all()
@@ -94,7 +94,7 @@ class TestUserRepository:
         fetched = await repo.get_by_telegram_id(1)
         assert fetched is not None
         assert fetched.username == "new"
-        assert fetched.display_name == "New"
+        assert fetched.display_name == "Old"
 
 
 class TestRoomRepository:
@@ -263,6 +263,23 @@ class TestRoomPlayerRepository:
             await SqlAlchemyRoomPlayerRepository(session).add(
                 RoomPlayer.join(room_id=room.id, user_telegram_id=2, now=NOW)
             )
+
+    async def test_save_persists_cash_out(self, session: AsyncSession) -> None:
+        room = await _make_room(session, admin_telegram_id=1)
+        assert room.id is not None
+        repo = SqlAlchemyRoomPlayerRepository(session)
+        member = await _make_member(session, room, telegram_id=2)
+        assert member.id is not None
+
+        member.record_cash_out(1200, NOW)
+        await repo.save(member)
+        await session.flush()
+        session.expire_all()
+
+        fetched = await repo.get_by_id(member.id)
+        assert fetched is not None
+        assert fetched.final_chip_count == 1200
+        assert fetched.cashed_out_at == NOW
 
 
 class TestBuyInRepository:

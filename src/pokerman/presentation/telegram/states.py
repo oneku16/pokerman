@@ -13,3 +13,11 @@ class RoomSettingsStates(StatesGroup):
 
 class BuyInStates(StatesGroup):
     waiting_for_custom_amount = State()
+
+
+class RegistrationStates(StatesGroup):
+    waiting_for_display_name = State()
+
+
+class CashOutStates(StatesGroup):
+    waiting_for_chip_count = State()

@@ -16,21 +16,21 @@ class TestUser:
         assert user.display_name == "Azamat"
         assert user.created_at == NOW
 
-    def test_refresh_profile_updates_mutable_fields_only(self) -> None:
+    def test_refresh_profile_updates_username_only(self) -> None:
         user = User.register(
-            telegram_id=123, username="old_name", display_name="Old", now=NOW
+            telegram_id=123, username="old_name", display_name="Chosen Name", now=NOW
         )
 
-        user.refresh_profile(username="new_name", display_name="New")
+        user.refresh_profile(username="new_name")
 
         assert user.telegram_id == 123
         assert user.username == "new_name"
-        assert user.display_name == "New"
+        assert user.display_name == "Chosen Name"
         assert user.created_at == NOW
 
     def test_refresh_profile_allows_clearing_username(self) -> None:
         user = User.register(telegram_id=123, username="had_one", display_name="X", now=NOW)
 
-        user.refresh_profile(username=None, display_name="X")
+        user.refresh_profile(username=None)
 
         assert user.username is None

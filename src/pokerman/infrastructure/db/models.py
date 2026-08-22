@@ -69,6 +69,8 @@ class RoomPlayerModel(Base):
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    final_chip_count: Mapped[int | None]
+    cashed_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class BuyInModel(Base):

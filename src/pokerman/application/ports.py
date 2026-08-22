@@ -1,7 +1,7 @@
 from types import TracebackType
 from typing import Protocol
 
-from pokerman.application.read_models import PlayerLedgerRow
+from pokerman.application.read_models import PlayerLedgerRow, PlayerStatistics
 from pokerman.domain.entities import BuyIn, PokerRoom, RoomPlayer, User
 from pokerman.domain.value_objects import RoomCode
 
@@ -27,6 +27,7 @@ class RoomPlayerRepository(Protocol):
     async def get(self, room_id: int, user_telegram_id: int) -> RoomPlayer | None: ...
     async def get_by_id(self, room_player_id: int) -> RoomPlayer | None: ...
     async def list_for_room(self, room_id: int) -> list[RoomPlayer]: ...
+    async def save(self, member: RoomPlayer) -> None: ...
 
 
 class BuyInRepository(Protocol):
@@ -43,6 +44,10 @@ class RoomCodeGenerator(Protocol):
 
 class RoomLedgerQuery(Protocol):
     async def player_totals(self, room_id: int) -> list[PlayerLedgerRow]: ...
+
+
+class PlayerStatisticsQuery(Protocol):
+    async def get_statistics(self, telegram_id: int) -> PlayerStatistics: ...
 
 
 class UnitOfWork(Protocol):

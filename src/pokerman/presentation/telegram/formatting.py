@@ -1,5 +1,6 @@
 import html
 
+from pokerman.application.read_models import PlayerStatistics
 from pokerman.application.use_cases.get_player_history import PlayerHistory
 from pokerman.application.use_cases.get_room_dashboard import RoomDashboard
 from pokerman.domain.entities import PokerRoom
@@ -28,7 +29,7 @@ def format_room_created(room: PokerRoom, bot_username: str) -> str:
 def format_dashboard(dashboard: RoomDashboard) -> str:
     room = dashboard.room
     title = "Final ledger" if room.status == RoomStatus.CLOSED else "Dashboard"
-    rows = sorted(dashboard.players, key=lambda r: r.display_name.lower())
+    rows = sorted(dashboard.players, key=lambda r: r.confirmed_total, reverse=True)
 
     lines = [f"{room.name} — {title}", ""]
     if rows:
@@ -76,3 +77,40 @@ def format_buy_in_decision_for_player(
 ) -> str:
     outcome = "confirmed" if confirmed else "rejected"
     return f"Your buy-in of {amount} {esc(currency)} in {esc(room_name)} was {outcome}."
+
+
+def format_cash_out_prompt(room: PokerRoom) -> str:
+    return (
+        f"<b>{esc(room.name)}</b> has closed.\n\n"
+        "Tap below and tell us how many chips you finished with, so we can work out "
+        "your result."
+    )
+
+
+def format_cash_out_confirmation(*, chip_count: int, total_spent: int, currency: str) -> str:
+    net = chip_count - total_spent
+    sign = "+" if net >= 0 else ""
+    return (
+        f"You entered {chip_count} {esc(currency)}.\n"
+        f"Total buy-in: {total_spent} {esc(currency)}.\n"
+        f"Net result: {sign}{net} {esc(currency)}.\n\n"
+        "Confirm this is correct, or re-enter."
+    )
+
+
+def format_cash_out_recorded(net_result: int, currency: str) -> str:
+    sign = "+" if net_result >= 0 else ""
+    return f"Recorded. Your net result: {sign}{net_result} {esc(currency)}."
+
+
+def format_statistics(stats: PlayerStatistics, currency: str) -> str:
+    sign = "+" if stats.net_result >= 0 else ""
+    lines = [
+        f"{stats.display_name} — Statistics",
+        "",
+        f"Games played: {stats.games_played}",
+        f"Buy-ins: {stats.total_buy_in_count} ({stats.total_spent} {currency})",
+        f"Cashed out: {stats.total_cashed_out} {currency}",
+        f"Net result: {sign}{stats.net_result} {currency}",
+    ]
+    return f"<pre>{esc("\n".join(lines))}</pre>"

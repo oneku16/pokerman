@@ -57,3 +57,17 @@ class CloseRoomAskCallback(CallbackData, prefix="closeask"):
 
 class CloseRoomConfirmedCallback(CallbackData, prefix="closeok"):
     room_id: int
+
+
+class CashOutPromptCallback(CallbackData, prefix="cashout"):
+    room_id: int
+
+
+class CashOutConfirmCallback(CallbackData, prefix="cashoutok"):
+    room_id: int
+    chip_count: int
+    total_spent: int
+
+
+class CashOutReenterCallback(CallbackData, prefix="cashoutre"):
+    room_id: int

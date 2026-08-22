@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from pokerman.domain.enums import BuyInStatus, RoomStatus
-from pokerman.domain.errors import InvalidBuyInStateError, RoomClosedError
+from pokerman.domain.errors import (
+    CashOutAlreadyRecordedError,
+    InvalidBuyInStateError,
+    RoomClosedError,
+)
 from pokerman.domain.value_objects import RoomCode
 
 
@@ -26,9 +30,8 @@ class User:
             created_at=now,
         )
 
-    def refresh_profile(self, *, username: str | None, display_name: str) -> None:
+    def refresh_profile(self, *, username: str | None) -> None:
         self.username = username
-        self.display_name = display_name
 
 
 @dataclass(slots=True)
@@ -37,10 +40,22 @@ class RoomPlayer:
     room_id: int
     user_telegram_id: int
     joined_at: datetime
+    final_chip_count: int | None = None
+    cashed_out_at: datetime | None = None
 
     @classmethod
     def join(cls, *, room_id: int, user_telegram_id: int, now: datetime) -> RoomPlayer:
         return cls(id=None, room_id=room_id, user_telegram_id=user_telegram_id, joined_at=now)
+
+    def record_cash_out(self, chip_count: int, now: datetime) -> None:
+        if self.final_chip_count is not None:
+            raise CashOutAlreadyRecordedError(
+                f"room player {self.id} already recorded a cash-out"
+            )
+        if chip_count < 0:
+            raise ValueError("chip count cannot be negative")
+        self.final_chip_count = chip_count
+        self.cashed_out_at = now
 
 
 @dataclass(slots=True)

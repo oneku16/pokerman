@@ -17,6 +17,6 @@ async def upsert_user(
                 now=datetime.now(UTC),
             )
         )
-    user.refresh_profile(username=username, display_name=display_name)
+    user.refresh_profile(username=username)
     await users.save(user)
     return user

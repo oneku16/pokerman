@@ -10,6 +10,10 @@ class RoomClosedError(DomainError):
     pass
 
 
+class RoomNotClosedError(DomainError):
+    pass
+
+
 class DuplicateMembershipError(DomainError):
     pass
 
@@ -23,6 +27,10 @@ class BuyInNotFoundError(DomainError):
 
 
 class InvalidBuyInStateError(DomainError):
+    pass
+
+
+class CashOutAlreadyRecordedError(DomainError):
     pass
 
 

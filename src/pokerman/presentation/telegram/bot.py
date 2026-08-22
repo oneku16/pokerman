@@ -4,7 +4,7 @@ from aiogram.enums import ParseMode
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from pokerman.presentation.telegram.deps import Deps
-from pokerman.presentation.telegram.handlers import buy_in, dashboard, room_admin, start
+from pokerman.presentation.telegram.handlers import buy_in, cash_out, dashboard, room_admin, start
 
 
 def build_bot(token: str) -> Bot:
@@ -17,6 +17,7 @@ def build_dispatcher(
     dispatcher = Dispatcher()
     dispatcher.include_router(room_admin.router)
     dispatcher.include_router(buy_in.router)
+    dispatcher.include_router(cash_out.router)
     dispatcher.include_router(dashboard.router)
     dispatcher.include_router(start.router)
     dispatcher["deps"] = Deps(

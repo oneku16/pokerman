@@ -34,3 +34,9 @@ class SqlAlchemyRoomPlayerRepository:
         stmt = select(RoomPlayerModel).where(RoomPlayerModel.room_id == room_id)
         result = await self._session.execute(stmt)
         return [room_player_to_domain(model) for model in result.scalars().all()]
+
+    async def save(self, member: RoomPlayer) -> None:
+        assert member.id is not None
+        model = await self._session.get(RoomPlayerModel, member.id)
+        assert model is not None
+        apply_room_player_to_model(member, model)

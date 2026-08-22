@@ -53,27 +53,28 @@ class TestSqlAlchemyUnitOfWork:
             uow,
             codes,
             admin_telegram_id=1,
-            admin_username=None,
+            admin_username="original_handle",
             admin_display_name="Elnazar",
             name="Poker Night #24",
             default_buy_in_amount=500,
             currency="KGS",
         )
 
-        # Re-joining as the existing admin refreshes their profile before the
+        # Re-joining as the existing admin refreshes their username before the
         # duplicate-membership check fails; that profile update must not persist.
         with pytest.raises(DuplicateMembershipError):
             await join_room_by_code(
                 SqlAlchemyUnitOfWork(session_factory),
                 code=str(room.code),
                 telegram_id=1,
-                username=None,
-                display_name="Should Not Persist",
+                username="should_not_persist",
+                display_name="Elnazar",
             )
 
         stored_user = (
             await session.execute(select(UserModel).where(UserModel.telegram_id == 1))
         ).scalar_one()
+        assert stored_user.username == "original_handle"
         assert stored_user.display_name == "Elnazar"
 
     async def test_domain_error_is_a_domain_error_not_a_db_error(

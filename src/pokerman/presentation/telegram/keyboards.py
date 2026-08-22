@@ -7,6 +7,9 @@ from pokerman.presentation.telegram.callback_data import (
     BuyInAmountCallback,
     BuyInCallback,
     BuyInOtherCallback,
+    CashOutConfirmCallback,
+    CashOutPromptCallback,
+    CashOutReenterCallback,
     CloseRoomAskCallback,
     CloseRoomConfirmedCallback,
     ConfirmBuyInCallback,
@@ -85,4 +88,26 @@ def close_room_confirm_keyboard(room_id: int) -> InlineKeyboardMarkup:
     builder.button(text="Yes, close it", callback_data=CloseRoomConfirmedCallback(room_id=room_id))
     builder.button(text="Cancel", callback_data=RoomCallback(room_id=room_id))
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def cash_out_prompt_keyboard(room_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Enter my chips", callback_data=CashOutPromptCallback(room_id=room_id))
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def cash_out_confirm_keyboard(
+    room_id: int, chip_count: int, total_spent: int
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Confirm",
+        callback_data=CashOutConfirmCallback(
+            room_id=room_id, chip_count=chip_count, total_spent=total_spent
+        ),
+    )
+    builder.button(text="Re-enter", callback_data=CashOutReenterCallback(room_id=room_id))
+    builder.adjust(2)
     return builder.as_markup()

@@ -54,6 +54,8 @@ def room_player_to_domain(model: RoomPlayerModel) -> RoomPlayer:
         room_id=model.room_id,
         user_telegram_id=model.user_telegram_id,
         joined_at=model.joined_at,
+        final_chip_count=model.final_chip_count,
+        cashed_out_at=model.cashed_out_at,
     )
 
 
@@ -61,6 +63,8 @@ def apply_room_player_to_model(member: RoomPlayer, model: RoomPlayerModel) -> No
     model.room_id = member.room_id
     model.user_telegram_id = member.user_telegram_id
     model.joined_at = member.joined_at
+    model.final_chip_count = member.final_chip_count
+    model.cashed_out_at = member.cashed_out_at
 
 
 def buy_in_to_domain(model: BuyInModel) -> BuyIn:
