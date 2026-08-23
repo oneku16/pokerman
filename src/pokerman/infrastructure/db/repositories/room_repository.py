@@ -49,11 +49,16 @@ class SqlAlchemyRoomRepository:
         assert model is not None
         apply_room_to_model(room, model)
 
-    async def list_for_user(self, telegram_id: int) -> list[PokerRoom]:
+    async def list_for_user(
+        self, telegram_id: int, *, limit: int | None = None
+    ) -> list[PokerRoom]:
         stmt = (
             select(PokerRoomModel)
             .join(RoomPlayerModel, RoomPlayerModel.room_id == PokerRoomModel.id)
             .where(RoomPlayerModel.user_telegram_id == telegram_id)
+            .order_by(RoomPlayerModel.joined_at.desc())
         )
+        if limit is not None:
+            stmt = stmt.limit(limit)
         result = await self._session.execute(stmt)
         return [room_to_domain(model) for model in result.scalars().all()]

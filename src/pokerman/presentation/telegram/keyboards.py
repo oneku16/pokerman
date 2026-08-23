@@ -49,6 +49,19 @@ def main_menu_keyboard(rooms: list[PokerRoom]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def room_choice_keyboard(rooms: list[PokerRoom]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for room in rooms:
+        assert room.id is not None
+        builder.button(
+            text=f"{room.name} ({room.status.value})",
+            callback_data=RoomCallback(room_id=room.id),
+        )
+    builder.button(text="Back", callback_data=MenuCallback())
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def cancel_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Cancel", callback_data=MenuCallback())

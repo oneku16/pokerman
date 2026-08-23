@@ -38,3 +38,22 @@ class TestListRoomsForUser:
         rooms = await list_rooms_for_user(uow, telegram_id=1)
 
         assert {r.id for r in rooms} == {room_a.id, room_b.id}
+
+    async def test_orders_rooms_by_most_recently_joined_first(self) -> None:
+        uow = FakeUnitOfWork()
+        room_a = await make_room(uow, code="1111", admin_telegram_id=1, name="Room A")
+        room_b = await make_room(uow, code="2222", admin_telegram_id=1, name="Room B")
+
+        rooms = await list_rooms_for_user(uow, telegram_id=1)
+
+        assert [r.id for r in rooms] == [room_b.id, room_a.id]
+
+    async def test_limit_caps_the_number_of_rooms_returned_to_the_most_recent(self) -> None:
+        uow = FakeUnitOfWork()
+        await make_room(uow, code="1111", admin_telegram_id=1, name="Room A")
+        await make_room(uow, code="2222", admin_telegram_id=1, name="Room B")
+        room_c = await make_room(uow, code="3333", admin_telegram_id=1, name="Room C")
+
+        rooms = await list_rooms_for_user(uow, telegram_id=1, limit=1)
+
+        assert [r.id for r in rooms] == [room_c.id]

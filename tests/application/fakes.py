@@ -70,13 +70,16 @@ class FakeRoomRepository:
         assert room.id is not None
         self._db.rooms[room.id] = room
 
-    async def list_for_user(self, telegram_id: int) -> list[PokerRoom]:
-        room_ids = {
-            rp.room_id
-            for rp in self._db.room_players.values()
-            if rp.user_telegram_id == telegram_id
-        }
-        return [self._db.rooms[rid] for rid in room_ids if rid in self._db.rooms]
+    async def list_for_user(
+        self, telegram_id: int, *, limit: int | None = None
+    ) -> list[PokerRoom]:
+        memberships = sorted(
+            (rp for rp in self._db.room_players.values() if rp.user_telegram_id == telegram_id),
+            key=lambda rp: rp.joined_at,
+            reverse=True,
+        )
+        rooms = [self._db.rooms[rp.room_id] for rp in memberships if rp.room_id in self._db.rooms]
+        return rooms if limit is None else rooms[:limit]
 
 
 class FakeRoomPlayerRepository:

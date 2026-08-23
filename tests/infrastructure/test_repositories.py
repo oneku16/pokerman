@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -44,7 +44,9 @@ async def _make_room(
     return room
 
 
-async def _make_member(session: AsyncSession, room: PokerRoom, telegram_id: int) -> RoomPlayer:
+async def _make_member(
+    session: AsyncSession, room: PokerRoom, telegram_id: int, *, joined_at: datetime = NOW
+) -> RoomPlayer:
     assert room.id is not None
     users = SqlAlchemyUserRepository(session)
     if await users.get_by_telegram_id(telegram_id) is None:
@@ -53,7 +55,7 @@ async def _make_member(session: AsyncSession, room: PokerRoom, telegram_id: int)
         )
         await session.flush()
     member = await SqlAlchemyRoomPlayerRepository(session).add(
-        RoomPlayer.join(room_id=room.id, user_telegram_id=telegram_id, now=NOW)
+        RoomPlayer.join(room_id=room.id, user_telegram_id=telegram_id, now=joined_at)
     )
     await session.flush()
     return member
@@ -209,6 +211,30 @@ class TestRoomRepository:
         rooms = await SqlAlchemyRoomRepository(session).list_for_user(1)
 
         assert {r.id for r in rooms} == {admin_room.id, other_room.id}
+
+    async def test_list_for_user_orders_by_most_recently_joined_first(
+        self, session: AsyncSession
+    ) -> None:
+        room_a = await _make_room(session, code="1111", admin_telegram_id=1)
+        room_b = await _make_room(session, code="2222", admin_telegram_id=2)
+        await _make_member(session, room_a, telegram_id=1, joined_at=NOW)
+        await _make_member(session, room_b, telegram_id=1, joined_at=NOW + timedelta(minutes=5))
+
+        rooms = await SqlAlchemyRoomRepository(session).list_for_user(1)
+
+        assert [r.id for r in rooms] == [room_b.id, room_a.id]
+
+    async def test_list_for_user_respects_limit(self, session: AsyncSession) -> None:
+        room_a = await _make_room(session, code="1111", admin_telegram_id=1)
+        room_b = await _make_room(session, code="2222", admin_telegram_id=2)
+        room_c = await _make_room(session, code="3333", admin_telegram_id=3)
+        await _make_member(session, room_a, telegram_id=1, joined_at=NOW)
+        await _make_member(session, room_b, telegram_id=1, joined_at=NOW + timedelta(minutes=5))
+        await _make_member(session, room_c, telegram_id=1, joined_at=NOW + timedelta(minutes=10))
+
+        rooms = await SqlAlchemyRoomRepository(session).list_for_user(1, limit=2)
+
+        assert [r.id for r in rooms] == [room_c.id, room_b.id]
 
     async def test_active_code_uniqueness_is_enforced_by_the_database(
         self, session: AsyncSession

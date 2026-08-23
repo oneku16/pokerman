@@ -22,9 +22,15 @@ from pokerman.presentation.telegram.formatting import (
     format_statistics,
 )
 from pokerman.presentation.telegram.handlers.start import WELCOME_TEXT
-from pokerman.presentation.telegram.keyboards import main_menu_keyboard, room_dashboard_keyboard
+from pokerman.presentation.telegram.keyboards import (
+    main_menu_keyboard,
+    room_choice_keyboard,
+    room_dashboard_keyboard,
+)
 
 router = Router(name="dashboard")
+
+_DASHBOARD_ROOM_CHOICES = 3
 
 
 async def _load_dashboard_view(
@@ -80,12 +86,14 @@ async def show_room_dashboard(
 @router.message(Command("dashboard"))
 async def cmd_dashboard(message: Message, deps: Deps) -> None:
     assert message.from_user is not None
-    rooms = await list_rooms_for_user(deps.uow(), telegram_id=message.from_user.id)
+    rooms = await list_rooms_for_user(
+        deps.uow(), telegram_id=message.from_user.id, limit=_DASHBOARD_ROOM_CHOICES
+    )
     if not rooms:
         await message.answer("You're not in any rooms yet.")
         return
     if len(rooms) > 1:
-        await message.answer("Which room?", reply_markup=main_menu_keyboard(rooms))
+        await message.answer("Which room?", reply_markup=room_choice_keyboard(rooms))
         return
 
     room = rooms[0]
