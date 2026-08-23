@@ -63,12 +63,10 @@ async def _load_dashboard_view(
 
 
 @router.callback_query(MenuCallback.filter())
-async def show_menu(callback: CallbackQuery, deps: Deps, state: FSMContext) -> None:
-    assert callback.from_user is not None
+async def show_menu(callback: CallbackQuery, state: FSMContext) -> None:
     assert isinstance(callback.message, Message)
     await state.clear()
-    rooms = await list_rooms_for_user(deps.uow(), telegram_id=callback.from_user.id)
-    await callback.message.edit_text(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
+    await callback.message.edit_text(WELCOME_TEXT, reply_markup=main_menu_keyboard())
     await callback.answer()
 
 

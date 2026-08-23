@@ -33,14 +33,8 @@ from pokerman.presentation.telegram.callback_data import (
 PRESET_BUY_IN_AMOUNTS = (200, 400, 500, 600, 1000)
 
 
-def main_menu_keyboard(rooms: list[PokerRoom]) -> InlineKeyboardMarkup:
+def main_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    for room in rooms:
-        assert room.id is not None
-        builder.button(
-            text=f"{room.name} ({room.status.value})",
-            callback_data=RoomCallback(room_id=room.id),
-        )
     builder.button(text="➕ Create Room", callback_data=NewRoomCallback())
     builder.button(text="🔑 Join Room", callback_data=JoinRoomCallback())
     builder.button(text="📊 My Statistics", callback_data=MyStatisticsCallback())

@@ -5,7 +5,6 @@ from aiogram.types import Message
 
 from pokerman.application.use_cases.get_user import get_user
 from pokerman.application.use_cases.join_room import join_room_by_code, join_room_by_deep_link
-from pokerman.application.use_cases.list_rooms_for_user import list_rooms_for_user
 from pokerman.application.use_cases.register_user import register_user
 from pokerman.domain.entities import PokerRoom
 from pokerman.domain.errors import DomainError
@@ -104,8 +103,7 @@ async def receive_display_name(message: Message, state: FSMContext, deps: Deps) 
         await message.answer("What should the room be called?")
     else:
         await message.answer(GREETING_FOR_NEW_USER)
-        rooms = await list_rooms_for_user(deps.uow(), telegram_id=message.from_user.id)
-        await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
+        await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard())
 
 
 @router.message(CommandStart(deep_link=True))
@@ -175,8 +173,7 @@ async def start_plain(message: Message, deps: Deps, state: FSMContext) -> None:
     )
     if not registered:
         return
-    rooms = await list_rooms_for_user(deps.uow(), telegram_id=message.from_user.id)
-    await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
+    await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard())
 
 
 @router.message(Command("help"))
