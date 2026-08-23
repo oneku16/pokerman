@@ -1,5 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from pokerman.application.use_cases.get_player_history import get_player_history
@@ -7,7 +8,12 @@ from pokerman.application.use_cases.get_player_statistics import get_player_stat
 from pokerman.application.use_cases.get_room_dashboard import RoomDashboard, get_room_dashboard
 from pokerman.application.use_cases.list_rooms_for_user import list_rooms_for_user
 from pokerman.domain.errors import DomainError
-from pokerman.presentation.telegram.callback_data import HistoryCallback, MenuCallback, RoomCallback
+from pokerman.presentation.telegram.callback_data import (
+    HistoryCallback,
+    MenuCallback,
+    MyStatisticsCallback,
+    RoomCallback,
+)
 from pokerman.presentation.telegram.deps import Deps
 from pokerman.presentation.telegram.error_messages import describe_error
 from pokerman.presentation.telegram.formatting import (
@@ -36,11 +42,21 @@ async def _load_dashboard_view(
 
 
 @router.callback_query(MenuCallback.filter())
-async def show_menu(callback: CallbackQuery, deps: Deps) -> None:
+async def show_menu(callback: CallbackQuery, deps: Deps, state: FSMContext) -> None:
     assert callback.from_user is not None
     assert isinstance(callback.message, Message)
+    await state.clear()
     rooms = await list_rooms_for_user(deps.uow(), telegram_id=callback.from_user.id)
     await callback.message.edit_text(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
+    await callback.answer()
+
+
+@router.callback_query(MyStatisticsCallback.filter())
+async def show_my_statistics(callback: CallbackQuery, deps: Deps) -> None:
+    assert callback.from_user is not None
+    assert isinstance(callback.message, Message)
+    stats = await get_player_statistics(deps.stats_query(), telegram_id=callback.from_user.id)
+    await callback.message.answer(format_statistics(stats, deps.default_currency))
     await callback.answer()
 
 

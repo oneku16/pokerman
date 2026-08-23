@@ -26,6 +26,9 @@ class UserModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    default_qr_file_id: Mapped[str | None]
+    spending_limit: Mapped[int | None]
+    spending_limit_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PokerRoomModel(Base):

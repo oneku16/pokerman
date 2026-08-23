@@ -10,17 +10,24 @@ from pokerman.presentation.telegram.callback_data import (
     CashOutConfirmCallback,
     CashOutPromptCallback,
     CashOutReenterCallback,
+    ChangeNameCallback,
     CloseRoomAskCallback,
     CloseRoomConfirmedCallback,
     ConfirmBuyInCallback,
     HistoryCallback,
+    JoinRoomCallback,
     MenuCallback,
+    MyStatisticsCallback,
     NewRoomCallback,
     PaidCallback,
     RejectBuyInCallback,
     RoomCallback,
     SetDefaultBuyInCallback,
+    SetDefaultQrCallback,
     SetQrCallback,
+    SetSpendingLimitCallback,
+    SettingsCallback,
+    UseSavedQrCallback,
 )
 
 PRESET_BUY_IN_AMOUNTS = (200, 400, 500, 600, 1000)
@@ -34,12 +41,37 @@ def main_menu_keyboard(rooms: list[PokerRoom]) -> InlineKeyboardMarkup:
             text=f"{room.name} ({room.status.value})",
             callback_data=RoomCallback(room_id=room.id),
         )
-    builder.button(text="Create Room", callback_data=NewRoomCallback())
+    builder.button(text="➕ Create Room", callback_data=NewRoomCallback())
+    builder.button(text="🔑 Join Room", callback_data=JoinRoomCallback())
+    builder.button(text="📊 My Statistics", callback_data=MyStatisticsCallback())
+    builder.button(text="⚙️ Settings", callback_data=SettingsCallback())
     builder.adjust(1)
     return builder.as_markup()
 
 
-def room_dashboard_keyboard(room: PokerRoom, *, is_admin: bool) -> InlineKeyboardMarkup:
+def cancel_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Cancel", callback_data=MenuCallback())
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def settings_keyboard(*, has_saved_qr: bool) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Change my name", callback_data=ChangeNameCallback())
+    builder.button(
+        text="Replace saved QR" if has_saved_qr else "Save a payment QR",
+        callback_data=SetDefaultQrCallback(),
+    )
+    builder.button(text="Set spending limit", callback_data=SetSpendingLimitCallback())
+    builder.button(text="Back", callback_data=MenuCallback())
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def room_dashboard_keyboard(
+    room: PokerRoom, *, is_admin: bool, offer_saved_qr: bool = False
+) -> InlineKeyboardMarkup:
     assert room.id is not None
     builder = InlineKeyboardBuilder()
     builder.button(text="Dashboard", callback_data=RoomCallback(room_id=room.id))
@@ -48,6 +80,10 @@ def room_dashboard_keyboard(room: PokerRoom, *, is_admin: bool) -> InlineKeyboar
     builder.button(text="My History", callback_data=HistoryCallback(room_id=room.id))
     if is_admin and room.status == RoomStatus.ACTIVE:
         builder.button(text="Change QR", callback_data=SetQrCallback(room_id=room.id))
+        if offer_saved_qr:
+            builder.button(
+                text="Use my saved QR", callback_data=UseSavedQrCallback(room_id=room.id)
+            )
         builder.button(
             text="Change Default Buy-In", callback_data=SetDefaultBuyInCallback(room_id=room.id)
         )

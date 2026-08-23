@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.filters import CommandObject, CommandStart, StateFilter
+from aiogram.filters import Command, CommandObject, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -7,9 +7,11 @@ from pokerman.application.use_cases.get_user import get_user
 from pokerman.application.use_cases.join_room import join_room_by_code, join_room_by_deep_link
 from pokerman.application.use_cases.list_rooms_for_user import list_rooms_for_user
 from pokerman.application.use_cases.register_user import register_user
+from pokerman.domain.entities import PokerRoom
 from pokerman.domain.errors import DomainError
 from pokerman.presentation.telegram.deps import Deps
 from pokerman.presentation.telegram.error_messages import describe_error
+from pokerman.presentation.telegram.formatting import format_help_text
 from pokerman.presentation.telegram.keyboards import main_menu_keyboard, room_dashboard_keyboard
 from pokerman.presentation.telegram.states import CreateRoomStates, RegistrationStates
 
@@ -17,7 +19,16 @@ router = Router(name="start")
 
 WELCOME_TEXT = (
     "Welcome to Pokerman — a room manager and buy-in ledger for private poker games.\n\n"
-    "Create a room, or join one with its 4-digit code."
+    "Create a room, or join one with its 4-digit code.\n\n"
+    "New here? Send /help for a quick tour."
+)
+
+GREETING_FOR_NEW_USER = (
+    "👋 Welcome to Pokerman!\n\n"
+    "I keep the books for private poker games — who bought in, for how much, and how "
+    "everyone finished. I never hold or move money; you pay your host directly and I "
+    "just record it.\n\n"
+    "Send /help any time for the full rundown."
 )
 
 _MAX_NAME_LENGTH = 64
@@ -92,6 +103,7 @@ async def receive_display_name(message: Message, state: FSMContext, deps: Deps) 
         await state.set_state(CreateRoomStates.waiting_for_name)
         await message.answer("What should the room be called?")
     else:
+        await message.answer(GREETING_FOR_NEW_USER)
         rooms = await list_rooms_for_user(deps.uow(), telegram_id=message.from_user.id)
         await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
 
@@ -152,10 +164,24 @@ async def _complete_deep_link_join(
 
 
 @router.message(CommandStart())
-async def start_plain(message: Message, deps: Deps) -> None:
+async def start_plain(message: Message, deps: Deps, state: FSMContext) -> None:
     assert message.from_user is not None
+    registered = await ensure_registered_or_ask(
+        message,
+        telegram_id=message.from_user.id,
+        deps=deps,
+        state=state,
+        pending_type="menu",
+    )
+    if not registered:
+        return
     rooms = await list_rooms_for_user(deps.uow(), telegram_id=message.from_user.id)
     await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard(rooms))
+
+
+@router.message(Command("help"))
+async def cmd_help(message: Message) -> None:
+    await message.answer(format_help_text())
 
 
 @router.message(StateFilter(None), F.text.regexp(r"^\d{4}$"))
@@ -190,7 +216,7 @@ async def _complete_code_join(
     username: str | None,
     display_name: str,
     code: str,
-) -> None:
+) -> PokerRoom | None:
     try:
         room = await join_room_by_code(
             deps.uow(),
@@ -201,8 +227,9 @@ async def _complete_code_join(
         )
     except DomainError as error:
         await message.answer(describe_error(error))
-        return
+        return None
     await message.answer(
         f"Joined {room.name}.",
         reply_markup=room_dashboard_keyboard(room, is_admin=False),
     )
+    return room

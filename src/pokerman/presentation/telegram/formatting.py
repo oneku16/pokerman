@@ -3,7 +3,7 @@ import html
 from pokerman.application.read_models import PlayerStatistics
 from pokerman.application.use_cases.get_player_history import PlayerHistory
 from pokerman.application.use_cases.get_room_dashboard import RoomDashboard
-from pokerman.domain.entities import PokerRoom
+from pokerman.domain.entities import PokerRoom, User
 from pokerman.domain.enums import RoomStatus
 
 
@@ -101,6 +101,49 @@ def format_cash_out_confirmation(*, chip_count: int, total_spent: int, currency:
 def format_cash_out_recorded(net_result: int, currency: str) -> str:
     sign = "+" if net_result >= 0 else ""
     return f"Recorded. Your net result: {sign}{net_result} {esc(currency)}."
+
+
+def format_help_text() -> str:
+    return (
+        "<b>Pokerman — how it works</b>\n\n"
+        "Pokerman keeps the books for a private poker game. It never holds, moves, or "
+        "processes money — you pay the room's host directly, and the bot just records "
+        "who bought in for how much.\n\n"
+        "<b>Playing</b>\n"
+        "• Join a room with its 4-digit code or an invite link.\n"
+        "• Tap <b>Buy In</b>, pick an amount, and you'll see the host's payment QR.\n"
+        "• Transfer the money, then tap <b>I Paid</b>.\n"
+        "• The host confirms it, and only then does it count toward the totals.\n\n"
+        "<b>Hosting</b>\n"
+        "• Create a room and share the code or link.\n"
+        "• Upload a payment QR so players know where to send money.\n"
+        "• Confirm or reject each buy-in request as it comes in.\n"
+        "• Close the room when the game ends — everyone is asked for their final "
+        "chip count, and the bot works out each player's result.\n\n"
+        "<b>Commands</b>\n"
+        "/start — main menu\n"
+        "/dashboard — current room standings\n"
+        "/statistics — your lifetime totals\n"
+        "/settings — your name, saved QR, and spending limit\n"
+        "/help — this message"
+    )
+
+
+def format_settings(user: User, currency: str) -> str:
+    if user.spending_limit is None:
+        limit_line = "Spending limit: none"
+    else:
+        limit_line = f"Spending limit: {user.spending_limit} {currency} per room"
+    qr_line = "Saved QR: yes" if user.default_qr_file_id else "Saved QR: none"
+
+    return (
+        "<b>Settings</b>\n\n"
+        f"Name: {esc(user.display_name)}\n"
+        f"{qr_line}\n"
+        f"{limit_line}\n\n"
+        "<i>A spending limit caps how much you can buy in for within a single room. "
+        "Once set, it can only be changed once every 7 days.</i>"
+    )
 
 
 def format_statistics(stats: PlayerStatistics, currency: str) -> str:

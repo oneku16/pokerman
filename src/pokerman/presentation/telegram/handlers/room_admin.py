@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from pokerman.application.use_cases.close_room import close_room
 from pokerman.application.use_cases.create_room import create_room
 from pokerman.application.use_cases.get_room_dashboard import get_room_dashboard
+from pokerman.application.use_cases.get_user import get_user
 from pokerman.application.use_cases.list_room_members import list_room_members
 from pokerman.application.use_cases.update_default_buy_in import update_default_buy_in
 from pokerman.application.use_cases.upload_room_qr import upload_room_qr
@@ -16,6 +17,7 @@ from pokerman.presentation.telegram.callback_data import (
     NewRoomCallback,
     SetDefaultBuyInCallback,
     SetQrCallback,
+    UseSavedQrCallback,
 )
 from pokerman.presentation.telegram.deps import Deps
 from pokerman.presentation.telegram.error_messages import describe_error
@@ -26,6 +28,7 @@ from pokerman.presentation.telegram.formatting import (
 )
 from pokerman.presentation.telegram.handlers.start import ensure_registered_or_ask
 from pokerman.presentation.telegram.keyboards import (
+    cancel_keyboard,
     cash_out_prompt_keyboard,
     close_room_confirm_keyboard,
     room_dashboard_keyboard,
@@ -51,7 +54,9 @@ async def start_create_room(callback: CallbackQuery, deps: Deps, state: FSMConte
         await callback.answer()
         return
     await state.set_state(CreateRoomStates.waiting_for_name)
-    await callback.message.answer("What should the room be called?")
+    await callback.message.answer(
+        "What should the room be called?", reply_markup=cancel_keyboard()
+    )
     await callback.answer()
 
 
@@ -59,11 +64,11 @@ async def start_create_room(callback: CallbackQuery, deps: Deps, state: FSMConte
 async def receive_room_name(message: Message, state: FSMContext) -> None:
     name = (message.text or "").strip()
     if not name:
-        await message.answer("Please send a room name as text.")
+        await message.answer("Please send a room name as text.", reply_markup=cancel_keyboard())
         return
     await state.update_data(room_name=name)
     await state.set_state(CreateRoomStates.waiting_for_buy_in)
-    await message.answer("What's the default buy-in amount?")
+    await message.answer("What's the default buy-in amount?", reply_markup=cancel_keyboard())
 
 
 @router.message(CreateRoomStates.waiting_for_buy_in)
@@ -71,7 +76,9 @@ async def receive_default_buy_in(message: Message, state: FSMContext, deps: Deps
     assert message.from_user is not None
     amount = parse_positive_amount(message.text or "")
     if amount is None:
-        await message.answer("Please send a positive whole number, e.g. 500.")
+        await message.answer(
+            "Please send a positive whole number, e.g. 500.", reply_markup=cancel_keyboard()
+        )
         return
 
     data = await state.get_data()
@@ -86,10 +93,11 @@ async def receive_default_buy_in(message: Message, state: FSMContext, deps: Deps
         currency=deps.default_currency,
     )
     await state.clear()
-    await message.answer(
-        format_room_created(room, deps.bot_username),
-        reply_markup=room_dashboard_keyboard(room, is_admin=True),
-    )
+
+    admin = await get_user(deps.uow(), telegram_id=message.from_user.id)
+    offer_saved_qr = admin is not None and admin.default_qr_file_id is not None
+    keyboard = room_dashboard_keyboard(room, is_admin=True, offer_saved_qr=offer_saved_qr)
+    await message.answer(format_room_created(room, deps.bot_username), reply_markup=keyboard)
 
 
 @router.callback_query(SetQrCallback.filter())
@@ -125,6 +133,32 @@ async def receive_new_qr(message: Message, state: FSMContext, deps: Deps) -> Non
 
     await state.clear()
     await message.answer("QR updated.", reply_markup=room_dashboard_keyboard(room, is_admin=True))
+
+
+@router.callback_query(UseSavedQrCallback.filter())
+async def use_saved_qr(
+    callback: CallbackQuery, callback_data: UseSavedQrCallback, deps: Deps
+) -> None:
+    assert callback.from_user is not None
+    assert isinstance(callback.message, Message)
+    admin = await get_user(deps.uow(), telegram_id=callback.from_user.id)
+    if admin is None or admin.default_qr_file_id is None:
+        await callback.answer("No saved QR on file.", show_alert=True)
+        return
+    try:
+        room = await upload_room_qr(
+            deps.uow(),
+            room_id=callback_data.room_id,
+            admin_telegram_id=callback.from_user.id,
+            qr_file_id=admin.default_qr_file_id,
+        )
+    except DomainError as error:
+        await callback.answer(describe_error(error), show_alert=True)
+        return
+    await callback.message.answer(
+        "QR updated.", reply_markup=room_dashboard_keyboard(room, is_admin=True)
+    )
+    await callback.answer()
 
 
 @router.callback_query(SetDefaultBuyInCallback.filter())

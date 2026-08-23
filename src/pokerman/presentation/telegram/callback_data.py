@@ -71,3 +71,31 @@ class CashOutConfirmCallback(CallbackData, prefix="cashoutok"):
 
 class CashOutReenterCallback(CallbackData, prefix="cashoutre"):
     room_id: int
+
+
+class JoinRoomCallback(CallbackData, prefix="joinroom"):
+    pass
+
+
+class MyStatisticsCallback(CallbackData, prefix="mystats"):
+    pass
+
+
+class SettingsCallback(CallbackData, prefix="settings"):
+    pass
+
+
+class ChangeNameCallback(CallbackData, prefix="chgname"):
+    pass
+
+
+class SetDefaultQrCallback(CallbackData, prefix="setdefqr"):
+    pass
+
+
+class SetSpendingLimitCallback(CallbackData, prefix="setlimit"):
+    pass
+
+
+class UseSavedQrCallback(CallbackData, prefix="usesavedqr"):
+    room_id: int

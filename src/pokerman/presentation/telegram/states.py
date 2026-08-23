@@ -21,3 +21,13 @@ class RegistrationStates(StatesGroup):
 
 class CashOutStates(StatesGroup):
     waiting_for_chip_count = State()
+
+
+class JoinRoomStates(StatesGroup):
+    waiting_for_code = State()
+
+
+class SettingsStates(StatesGroup):
+    waiting_for_new_name = State()
+    waiting_for_new_qr = State()
+    waiting_for_new_limit = State()

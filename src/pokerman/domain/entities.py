@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pokerman.domain.enums import BuyInStatus, RoomStatus
 from pokerman.domain.errors import (
     CashOutAlreadyRecordedError,
     InvalidBuyInStateError,
     RoomClosedError,
+    SpendingLimitChangeTooSoonError,
 )
 from pokerman.domain.value_objects import RoomCode
+
+SPENDING_LIMIT_COOLDOWN = timedelta(days=7)
 
 
 @dataclass(slots=True)
@@ -18,6 +21,9 @@ class User:
     username: str | None
     display_name: str
     created_at: datetime
+    default_qr_file_id: str | None = None
+    spending_limit: int | None = None
+    spending_limit_updated_at: datetime | None = None
 
     @classmethod
     def register(
@@ -32,6 +38,24 @@ class User:
 
     def refresh_profile(self, *, username: str | None) -> None:
         self.username = username
+
+    def rename(self, display_name: str) -> None:
+        if not display_name.strip():
+            raise ValueError("display name must not be blank")
+        self.display_name = display_name
+
+    def set_default_qr(self, qr_file_id: str) -> None:
+        self.default_qr_file_id = qr_file_id
+
+    def set_spending_limit(self, limit: int, now: datetime) -> None:
+        if limit <= 0:
+            raise ValueError("spending limit must be positive")
+        if self.spending_limit_updated_at is not None:
+            next_allowed_at = self.spending_limit_updated_at + SPENDING_LIMIT_COOLDOWN
+            if now < next_allowed_at:
+                raise SpendingLimitChangeTooSoonError(next_allowed_at)
+        self.spending_limit = limit
+        self.spending_limit_updated_at = now
 
 
 @dataclass(slots=True)

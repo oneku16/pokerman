@@ -96,6 +96,39 @@ class TestUserRepository:
         assert fetched.username == "new"
         assert fetched.display_name == "Old"
 
+    async def test_personal_settings_default_to_unset(self, session: AsyncSession) -> None:
+        repo = SqlAlchemyUserRepository(session)
+        await repo.add(User.register(telegram_id=1, username=None, display_name="X", now=NOW))
+        await session.flush()
+
+        fetched = await repo.get_by_telegram_id(1)
+
+        assert fetched is not None
+        assert fetched.default_qr_file_id is None
+        assert fetched.spending_limit is None
+        assert fetched.spending_limit_updated_at is None
+
+    async def test_save_persists_personal_settings(self, session: AsyncSession) -> None:
+        repo = SqlAlchemyUserRepository(session)
+        user = await repo.add(
+            User.register(telegram_id=1, username=None, display_name="Old", now=NOW)
+        )
+        await session.flush()
+
+        user.rename("Chosen Name")
+        user.set_default_qr("tg-file-id")
+        user.set_spending_limit(500, NOW)
+        await repo.save(user)
+        await session.flush()
+        session.expire_all()
+
+        fetched = await repo.get_by_telegram_id(1)
+        assert fetched is not None
+        assert fetched.display_name == "Chosen Name"
+        assert fetched.default_qr_file_id == "tg-file-id"
+        assert fetched.spending_limit == 500
+        assert fetched.spending_limit_updated_at == NOW
+
 
 class TestRoomRepository:
     async def test_add_and_get_by_id_round_trip(self, session: AsyncSession) -> None:

@@ -2,7 +2,7 @@ import hmac
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from aiogram.types import Update
+from aiogram.types import BotCommand, Update
 from fastapi import FastAPI, Header, HTTPException, Request
 
 from pokerman.infrastructure.config import Settings
@@ -31,6 +31,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await bot.set_webhook(
             url=f"{settings.public_base_url}{WEBHOOK_PATH}",
             secret_token=settings.telegram_webhook_secret,
+        )
+        await bot.set_my_commands(
+            [
+                BotCommand(command="start", description="Main menu"),
+                BotCommand(command="dashboard", description="Current room standings"),
+                BotCommand(command="statistics", description="Your lifetime totals"),
+                BotCommand(command="settings", description="Name, saved QR, spending limit"),
+                BotCommand(command="help", description="How Pokerman works"),
+            ]
         )
         try:
             yield

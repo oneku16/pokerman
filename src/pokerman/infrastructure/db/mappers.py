@@ -9,6 +9,9 @@ def user_to_domain(model: UserModel) -> User:
         username=model.username,
         display_name=model.display_name,
         created_at=model.created_at,
+        default_qr_file_id=model.default_qr_file_id,
+        spending_limit=model.spending_limit,
+        spending_limit_updated_at=model.spending_limit_updated_at,
     )
 
 
@@ -17,6 +20,9 @@ def apply_user_to_model(user: User, model: UserModel) -> None:
     model.username = user.username
     model.display_name = user.display_name
     model.created_at = user.created_at
+    model.default_qr_file_id = user.default_qr_file_id
+    model.spending_limit = user.spending_limit
+    model.spending_limit_updated_at = user.spending_limit_updated_at
 
 
 def room_to_domain(model: PokerRoomModel) -> PokerRoom:
