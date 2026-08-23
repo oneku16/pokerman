@@ -183,6 +183,7 @@ class FakeRoomLedgerQuery:
                     display_name=display_name,
                     confirmed_total=sum(b.amount for b in confirmed),
                     confirmed_count=len(confirmed),
+                    final_chip_count=member.final_chip_count,
                 )
             )
         return rows

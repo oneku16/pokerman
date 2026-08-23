@@ -24,11 +24,17 @@ class SqlAlchemyRoomLedgerQuery:
                 UserModel.display_name,
                 confirmed_total,
                 confirmed_count,
+                RoomPlayerModel.final_chip_count,
             )
             .join(UserModel, UserModel.telegram_id == RoomPlayerModel.user_telegram_id)
             .outerjoin(BuyInModel, BuyInModel.room_player_id == RoomPlayerModel.id)
             .where(RoomPlayerModel.room_id == room_id)
-            .group_by(RoomPlayerModel.id, RoomPlayerModel.user_telegram_id, UserModel.display_name)
+            .group_by(
+                RoomPlayerModel.id,
+                RoomPlayerModel.user_telegram_id,
+                UserModel.display_name,
+                RoomPlayerModel.final_chip_count,
+            )
         )
         async with self._session_factory() as session:
             result = await session.execute(stmt)
@@ -39,6 +45,7 @@ class SqlAlchemyRoomLedgerQuery:
                     display_name=row[2],
                     confirmed_total=int(row[3]),
                     confirmed_count=int(row[4]),
+                    final_chip_count=row[5],
                 )
                 for row in result.all()
             ]

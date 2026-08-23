@@ -35,7 +35,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await bot.set_my_commands(
             [
                 BotCommand(command="start", description="Main menu"),
-                BotCommand(command="dashboard", description="Current room standings"),
+                BotCommand(command="dashboard", description="Your current or last game"),
+                BotCommand(command="history", description="Pick from your last 10 rooms"),
                 BotCommand(command="statistics", description="Your lifetime totals"),
                 BotCommand(command="settings", description="Name, saved QR, spending limit"),
                 BotCommand(command="help", description="How Pokerman works"),

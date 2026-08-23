@@ -81,6 +81,54 @@ class TestRoomLedgerQuery:
         assert by_telegram_id[1].confirmed_total == 0
         assert by_telegram_id[1].confirmed_count == 0
 
+    async def test_player_totals_include_final_chip_count_after_cash_out(
+        self, session: AsyncSession, session_factory: async_sessionmaker[AsyncSession]
+    ) -> None:
+        users = SqlAlchemyUserRepository(session)
+        rooms = SqlAlchemyRoomRepository(session)
+        room_players = SqlAlchemyRoomPlayerRepository(session)
+        buy_ins = SqlAlchemyBuyInRepository(session)
+
+        await users.add(
+            User.register(telegram_id=1, username=None, display_name="Elnazar", now=NOW)
+        )
+        room = await rooms.add(
+            PokerRoom.open(
+                name="Poker Night #24",
+                code=RoomCode("4821"),
+                deep_link_token="tok",
+                default_buy_in_amount=500,
+                currency="KGS",
+                admin_telegram_id=1,
+                now=NOW,
+            )
+        )
+        await session.flush()
+        assert room.id is not None
+
+        member = await room_players.add(
+            RoomPlayer.join(room_id=room.id, user_telegram_id=1, now=NOW)
+        )
+        await session.flush()
+        assert member.id is not None
+
+        confirmed = await buy_ins.add(_make_buy_in(room_player_id=member.id, amount=300))
+        await session.flush()
+        confirmed.confirm(decided_by_telegram_id=1, now=NOW)
+        await buy_ins.save(confirmed)
+
+        member.record_cash_out(400, NOW)
+        await room_players.save(member)
+        await session.commit()
+
+        rows = await SqlAlchemyRoomLedgerQuery(session_factory).player_totals(room.id)
+
+        assert len(rows) == 1
+        assert rows[0].confirmed_total == 300
+        assert rows[0].final_chip_count == 400
+        assert rows[0].current_value == 400
+        assert rows[0].net_result == 100
+
     async def test_player_with_no_buy_ins_still_appears(
         self, session: AsyncSession, session_factory: async_sessionmaker[AsyncSession]
     ) -> None:

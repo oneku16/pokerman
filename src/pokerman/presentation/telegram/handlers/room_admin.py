@@ -26,12 +26,12 @@ from pokerman.presentation.telegram.formatting import (
     format_dashboard,
     format_room_created,
 )
+from pokerman.presentation.telegram.handlers.dashboard import build_room_keyboard
 from pokerman.presentation.telegram.handlers.start import ensure_registered_or_ask
 from pokerman.presentation.telegram.keyboards import (
     cancel_keyboard,
     cash_out_prompt_keyboard,
     close_room_confirm_keyboard,
-    room_dashboard_keyboard,
 )
 from pokerman.presentation.telegram.parsing import parse_positive_amount
 from pokerman.presentation.telegram.states import CreateRoomStates, RoomSettingsStates
@@ -94,9 +94,7 @@ async def receive_default_buy_in(message: Message, state: FSMContext, deps: Deps
     )
     await state.clear()
 
-    admin = await get_user(deps.uow(), telegram_id=message.from_user.id)
-    offer_saved_qr = admin is not None and admin.default_qr_file_id is not None
-    keyboard = room_dashboard_keyboard(room, is_admin=True, offer_saved_qr=offer_saved_qr)
+    keyboard = await build_room_keyboard(deps, room, requesting_telegram_id=message.from_user.id)
     await message.answer(format_room_created(room, deps.bot_username), reply_markup=keyboard)
 
 
@@ -132,7 +130,8 @@ async def receive_new_qr(message: Message, state: FSMContext, deps: Deps) -> Non
         return
 
     await state.clear()
-    await message.answer("QR updated.", reply_markup=room_dashboard_keyboard(room, is_admin=True))
+    keyboard = await build_room_keyboard(deps, room, requesting_telegram_id=message.from_user.id)
+    await message.answer("QR updated.", reply_markup=keyboard)
 
 
 @router.callback_query(UseSavedQrCallback.filter())
@@ -155,9 +154,8 @@ async def use_saved_qr(
     except DomainError as error:
         await callback.answer(describe_error(error), show_alert=True)
         return
-    await callback.message.answer(
-        "QR updated.", reply_markup=room_dashboard_keyboard(room, is_admin=True)
-    )
+    keyboard = await build_room_keyboard(deps, room, requesting_telegram_id=callback.from_user.id)
+    await callback.message.answer("QR updated.", reply_markup=keyboard)
     await callback.answer()
 
 
@@ -194,10 +192,8 @@ async def receive_new_default_buy_in(message: Message, state: FSMContext, deps: 
         return
 
     await state.clear()
-    await message.answer(
-        f"Default buy-in is now {amount} {room.currency}.",
-        reply_markup=room_dashboard_keyboard(room, is_admin=True),
-    )
+    keyboard = await build_room_keyboard(deps, room, requesting_telegram_id=message.from_user.id)
+    await message.answer(f"Default buy-in is now {amount} {room.currency}.", reply_markup=keyboard)
 
 
 @router.callback_query(CloseRoomAskCallback.filter())

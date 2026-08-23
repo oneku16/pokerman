@@ -3,10 +3,13 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
+from pokerman.application.use_cases.get_current_or_last_room import get_current_or_last_room
 from pokerman.application.use_cases.get_player_history import get_player_history
 from pokerman.application.use_cases.get_player_statistics import get_player_statistics
 from pokerman.application.use_cases.get_room_dashboard import RoomDashboard, get_room_dashboard
+from pokerman.application.use_cases.get_user import get_user
 from pokerman.application.use_cases.list_rooms_for_user import list_rooms_for_user
+from pokerman.domain.entities import PokerRoom
 from pokerman.domain.errors import DomainError
 from pokerman.presentation.telegram.callback_data import (
     HistoryCallback,
@@ -30,7 +33,18 @@ from pokerman.presentation.telegram.keyboards import (
 
 router = Router(name="dashboard")
 
-_DASHBOARD_ROOM_CHOICES = 3
+_HISTORY_ROOM_LIMIT = 10
+
+
+async def build_room_keyboard(
+    deps: Deps, room: PokerRoom, *, requesting_telegram_id: int
+) -> InlineKeyboardMarkup:
+    is_admin = room.admin_telegram_id == requesting_telegram_id
+    offer_saved_qr = False
+    if is_admin:
+        admin = await get_user(deps.uow(), telegram_id=requesting_telegram_id)
+        offer_saved_qr = admin is not None and admin.default_qr_file_id is not None
+    return room_dashboard_keyboard(room, is_admin=is_admin, offer_saved_qr=offer_saved_qr)
 
 
 async def _load_dashboard_view(
@@ -42,8 +56,9 @@ async def _load_dashboard_view(
         room_id=room_id,
         requesting_telegram_id=requesting_telegram_id,
     )
-    is_admin = dashboard.room.admin_telegram_id == requesting_telegram_id
-    keyboard = room_dashboard_keyboard(dashboard.room, is_admin=is_admin)
+    keyboard = await build_room_keyboard(
+        deps, dashboard.room, requesting_telegram_id=requesting_telegram_id
+    )
     return dashboard, keyboard
 
 
@@ -86,17 +101,11 @@ async def show_room_dashboard(
 @router.message(Command("dashboard"))
 async def cmd_dashboard(message: Message, deps: Deps) -> None:
     assert message.from_user is not None
-    rooms = await list_rooms_for_user(
-        deps.uow(), telegram_id=message.from_user.id, limit=_DASHBOARD_ROOM_CHOICES
-    )
-    if not rooms:
-        await message.answer("You're not in any rooms yet.")
-        return
-    if len(rooms) > 1:
-        await message.answer("Which room?", reply_markup=room_choice_keyboard(rooms))
+    room = await get_current_or_last_room(deps.uow(), telegram_id=message.from_user.id)
+    if room is None:
+        await message.answer("You haven't played any rooms yet.")
         return
 
-    room = rooms[0]
     assert room.id is not None
     try:
         dashboard, keyboard = await _load_dashboard_view(
@@ -106,6 +115,21 @@ async def cmd_dashboard(message: Message, deps: Deps) -> None:
         await message.answer(describe_error(error))
         return
     await message.answer(format_dashboard(dashboard), reply_markup=keyboard)
+
+
+@router.message(Command("history"))
+async def cmd_history(message: Message, deps: Deps) -> None:
+    assert message.from_user is not None
+    rooms = await list_rooms_for_user(
+        deps.uow(), telegram_id=message.from_user.id, limit=_HISTORY_ROOM_LIMIT
+    )
+    if not rooms:
+        await message.answer("You haven't played any rooms yet.")
+        return
+    await message.answer(
+        "Your last rooms — pick one to see its results:",
+        reply_markup=room_choice_keyboard(rooms),
+    )
 
 
 @router.message(Command("statistics"))

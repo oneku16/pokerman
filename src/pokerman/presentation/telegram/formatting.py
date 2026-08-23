@@ -29,21 +29,26 @@ def format_room_created(room: PokerRoom, bot_username: str) -> str:
 def format_dashboard(dashboard: RoomDashboard) -> str:
     room = dashboard.room
     title = "Final ledger" if room.status == RoomStatus.CLOSED else "Dashboard"
-    rows = sorted(dashboard.players, key=lambda r: r.confirmed_total, reverse=True)
+    rows = sorted(dashboard.players, key=lambda r: (r.net_result, r.confirmed_total), reverse=True)
 
     lines = [f"{room.name} — {title}", ""]
     if rows:
         name_width = max(8, max(len(r.display_name) for r in rows))
-        lines.append(f"{'Player'.ljust(name_width)}  {'Total'.rjust(10)}  Buy-ins")
+        lines.append(
+            f"{'Player'.ljust(name_width)}  {'Buy-in'.rjust(8)}  {'Value'.rjust(8)}  Net"
+        )
         for row in rows:
-            total = f"{row.confirmed_total} {room.currency}"
+            sign = "+" if row.net_result >= 0 else ""
             lines.append(
-                f"{row.display_name.ljust(name_width)}  {total.rjust(10)}  {row.confirmed_count}"
+                f"{row.display_name.ljust(name_width)}  "
+                f"{str(row.confirmed_total).rjust(8)}  "
+                f"{str(row.current_value).rjust(8)}  "
+                f"{sign}{row.net_result}"
             )
     else:
         lines.append("No players yet.")
     lines.append("")
-    lines.append(f"Total: {dashboard.total_confirmed} {room.currency}")
+    lines.append(f"Total buy-in: {dashboard.total_confirmed} {room.currency}")
 
     return f"<pre>{esc("\n".join(lines))}</pre>"
 
@@ -122,7 +127,8 @@ def format_help_text() -> str:
         "chip count, and the bot works out each player's result.\n\n"
         "<b>Commands</b>\n"
         "/start — main menu\n"
-        "/dashboard — current room standings\n"
+        "/dashboard — your current game, or your last one if none is running\n"
+        "/history — pick from your last 10 rooms\n"
         "/statistics — your lifetime totals\n"
         "/settings — your name, saved QR, and spending limit\n"
         "/help — this message"
