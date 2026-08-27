@@ -29,6 +29,7 @@ from pokerman.presentation.telegram.keyboards import (
     buy_in_amount_keyboard,
     buy_in_keyboard,
 )
+from pokerman.presentation.telegram.messaging import safe_edit_text
 from pokerman.presentation.telegram.parsing import parse_positive_amount
 from pokerman.presentation.telegram.states import BuyInStates
 
@@ -173,7 +174,7 @@ async def _finish_decision(
 ) -> None:
     outcome = "Confirmed" if confirmed else "Rejected"
     if isinstance(callback.message, Message) and callback.message.text:
-        await callback.message.edit_text(f"{callback.message.text}\n\n{outcome} ✓")
+        await safe_edit_text(callback.message, f"{callback.message.text}\n\n{outcome} ✓")
     await callback.answer(outcome)
     await bot.send_message(
         result.player_telegram_id,

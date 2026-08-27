@@ -30,6 +30,7 @@ from pokerman.presentation.telegram.keyboards import (
     room_choice_keyboard,
     room_dashboard_keyboard,
 )
+from pokerman.presentation.telegram.messaging import safe_edit_text
 
 router = Router(name="dashboard")
 
@@ -66,7 +67,7 @@ async def _load_dashboard_view(
 async def show_menu(callback: CallbackQuery, state: FSMContext) -> None:
     assert isinstance(callback.message, Message)
     await state.clear()
-    await callback.message.edit_text(WELCOME_TEXT, reply_markup=main_menu_keyboard())
+    await safe_edit_text(callback.message, WELCOME_TEXT, reply_markup=main_menu_keyboard())
     await callback.answer()
 
 
@@ -92,7 +93,7 @@ async def show_room_dashboard(
     except DomainError as error:
         await callback.answer(describe_error(error), show_alert=True)
         return
-    await callback.message.edit_text(format_dashboard(dashboard), reply_markup=keyboard)
+    await safe_edit_text(callback.message, format_dashboard(dashboard), reply_markup=keyboard)
     await callback.answer()
 
 
