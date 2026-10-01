@@ -9,7 +9,7 @@ def make_settings(database_url: str = "postgresql+asyncpg://u:p@h:5432/db") -> S
         telegram_bot_token="token",
         telegram_bot_username="bot",
         telegram_webhook_secret="secret",
-        public_base_url="https://example.onrender.com",
+        public_base_url="https://pokerman.example.com",
     )
 
 
@@ -52,10 +52,10 @@ class TestPublicBaseUrl:
             telegram_bot_token="token",
             telegram_bot_username="bot",
             telegram_webhook_secret="secret",
-            public_base_url="https://example.onrender.com/",
+            public_base_url="https://pokerman.example.com/",
         )
 
-        assert settings.public_base_url == "https://example.onrender.com"
+        assert settings.public_base_url == "https://pokerman.example.com"
 
     def test_leaves_url_without_trailing_slash_unchanged(self) -> None:
-        assert make_settings().public_base_url == "https://example.onrender.com"
+        assert make_settings().public_base_url == "https://pokerman.example.com"
