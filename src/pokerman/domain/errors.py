@@ -49,6 +49,10 @@ class RoomCodeExhaustedError(DomainError):
     pass
 
 
+class InvalidOwnershipTransferError(DomainError):
+    pass
+
+
 class RoomHasPendingBuyInsError(DomainError):
     def __init__(self, pending_buy_in_ids: list[int]) -> None:
         self.pending_buy_in_ids = pending_buy_in_ids

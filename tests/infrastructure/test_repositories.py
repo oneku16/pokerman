@@ -146,6 +146,26 @@ class TestRoomRepository:
         assert fetched.currency == "KGS"
         assert fetched.admin_telegram_id == 1
 
+    async def test_planned_duration_and_owner_change_round_trip(
+        self, session: AsyncSession
+    ) -> None:
+        room = await _make_room(session, admin_telegram_id=1)
+        assert room.id is not None
+        await _make_member(session, room, telegram_id=2)
+        repo = SqlAlchemyRoomRepository(session)
+        room.planned_duration_hours = 5
+        room.transfer_ownership(2)
+        await repo.save(room)
+        await session.flush()
+        session.expunge_all()
+
+        fetched = await repo.get_by_id(room.id)
+
+        assert fetched is not None
+        assert fetched.planned_duration_hours == 5
+        assert fetched.planned_end_at == NOW + timedelta(hours=5)
+        assert fetched.admin_telegram_id == 2
+
     async def test_get_by_code_finds_active_room(self, session: AsyncSession) -> None:
         room = await _make_room(session, code="1234")
 

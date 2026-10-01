@@ -1,4 +1,6 @@
 import html
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from pokerman.application.read_models import PlayerStatistics
 from pokerman.application.use_cases.get_player_history import PlayerHistory
@@ -15,18 +17,43 @@ def deep_link(bot_username: str, room: PokerRoom) -> str:
     return f"https://t.me/{bot_username}?start={room.deep_link_token}"
 
 
-def format_room_created(room: PokerRoom, bot_username: str) -> str:
+def _format_remaining(seconds: float) -> str:
+    minutes = max(0, int(seconds // 60))
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h {minutes:02d}m" if hours else f"{minutes}m"
+
+
+def format_planned_end(room: PokerRoom, tz: ZoneInfo, now: datetime | None = None) -> str | None:
+    end_at = room.planned_end_at
+    if end_at is None or room.planned_duration_hours is None:
+        return None
+    clock = end_at.astimezone(tz).strftime("%H:%M")
+    line = f"Leave time: {clock} ({room.planned_duration_hours}h session)"
+    if room.status != RoomStatus.ACTIVE:
+        return line
+    remaining = (end_at - (now or datetime.now(UTC))).total_seconds()
+    if remaining > 0:
+        return f"{line}, {_format_remaining(remaining)} left"
+    return f"{line}, time's up"
+
+
+def format_room_created(room: PokerRoom, bot_username: str, tz: ZoneInfo) -> str:
+    planned_end = format_planned_end(room, tz)
+    planned_line = f"{planned_end}\n" if planned_end else ""
     return (
         f"<b>{esc(room.name)}</b> is open.\n\n"
         f"Room code: <code>{room.code}</code>\n"
         f"Deep link: {deep_link(bot_username, room)}\n"
-        f"Default buy-in: {room.default_buy_in_amount} {esc(room.currency)}\n\n"
+        f"Default buy-in: {room.default_buy_in_amount} {esc(room.currency)}\n"
+        f"{planned_line}\n"
         "Share the code or the link with your players. Upload a payment QR from "
         "the room menu so players can pay you."
     )
 
 
-def format_dashboard(dashboard: RoomDashboard) -> str:
+def format_dashboard(
+    dashboard: RoomDashboard, tz: ZoneInfo, now: datetime | None = None
+) -> str:
     room = dashboard.room
     title = "Final ledger" if room.status == RoomStatus.CLOSED else "Dashboard"
     rows = sorted(dashboard.players, key=lambda r: (r.net_result, r.confirmed_total), reverse=True)
@@ -49,6 +76,9 @@ def format_dashboard(dashboard: RoomDashboard) -> str:
         lines.append("No players yet.")
     lines.append("")
     lines.append(f"Total buy-in: {dashboard.total_confirmed} {room.currency}")
+    planned_end = format_planned_end(room, tz, now)
+    if planned_end:
+        lines.append(planned_end)
 
     return f"<pre>{esc("\n".join(lines))}</pre>"
 
@@ -82,6 +112,40 @@ def format_buy_in_decision_for_player(
 ) -> str:
     outcome = "confirmed" if confirmed else "rejected"
     return f"Your buy-in of {amount} {esc(currency)} in {esc(room_name)} was {outcome}."
+
+
+def format_transfer_ownership_prompt(room: PokerRoom, new_owner_name: str) -> str:
+    return (
+        f"Hand <b>{esc(room.name)}</b> over to <b>{esc(new_owner_name)}</b>?\n\n"
+        "They'll confirm buy-ins and manage the room from now on, and players will pay "
+        "them. You'll stay in the game as a regular player."
+    )
+
+
+def format_ownership_transferred(room: PokerRoom, new_owner_name: str) -> str:
+    return (
+        f"<b>{esc(new_owner_name)}</b> is now the host of <b>{esc(room.name)}</b>. "
+        "You're a regular player now."
+    )
+
+
+def format_ownership_received(room: PokerRoom, previous_owner_name: str) -> str:
+    text = (
+        f"<b>{esc(previous_owner_name)}</b> made you the host of <b>{esc(room.name)}</b>.\n\n"
+        "You now confirm buy-ins and manage the room."
+    )
+    if room.qr_file_id is None:
+        text += " Upload a payment QR from the room menu so players can pay you."
+    else:
+        text += " Your saved payment QR is now the room's QR."
+    return text
+
+
+def format_new_host_announcement(room: PokerRoom, new_owner_name: str) -> str:
+    return (
+        f"<b>{esc(new_owner_name)}</b> is now the host of <b>{esc(room.name)}</b>. "
+        "Send future buy-ins to them."
+    )
 
 
 def format_cash_out_prompt(room: PokerRoom) -> str:
@@ -120,9 +184,10 @@ def format_help_text() -> str:
         "• Transfer the money, then tap <b>I Paid</b>.\n"
         "• The host confirms it, and only then does it count toward the totals.\n\n"
         "<b>Hosting</b>\n"
-        "• Create a room and share the code or link.\n"
+        "• Create a room, pick how many hours you'll play, and share the code or link.\n"
         "• Upload a payment QR so players know where to send money.\n"
         "• Confirm or reject each buy-in request as it comes in.\n"
+        "• Leaving early? <b>Transfer Ownership</b> hands the room to another player.\n"
         "• Close the room when the game ends — everyone is asked for their final "
         "chip count, and the bot works out each player's result.\n\n"
         "<b>Commands</b>\n"

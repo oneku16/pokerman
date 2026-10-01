@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from pokerman.domain.entities import PokerRoom
+from pokerman.domain.entities import PokerRoom, User
 from pokerman.domain.enums import RoomStatus
 from pokerman.presentation.telegram.callback_data import (
     BuyInAmountCallback,
@@ -20,6 +20,8 @@ from pokerman.presentation.telegram.callback_data import (
     MyStatisticsCallback,
     NewRoomCallback,
     PaidCallback,
+    PlayHoursCallback,
+    PlayHoursOtherCallback,
     RejectBuyInCallback,
     RoomCallback,
     SetDefaultBuyInCallback,
@@ -27,10 +29,14 @@ from pokerman.presentation.telegram.callback_data import (
     SetQrCallback,
     SetSpendingLimitCallback,
     SettingsCallback,
+    TransferOwnershipCallback,
+    TransferOwnershipConfirmCallback,
+    TransferOwnershipPickCallback,
     UseSavedQrCallback,
 )
 
 PRESET_BUY_IN_AMOUNTS = (200, 400, 500, 600, 1000)
+PRESET_PLAY_HOURS = (3, 4, 5, 6)
 
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
@@ -94,6 +100,9 @@ def room_dashboard_keyboard(
         builder.button(
             text="Change Default Buy-In", callback_data=SetDefaultBuyInCallback(room_id=room.id)
         )
+        builder.button(
+            text="Transfer Ownership", callback_data=TransferOwnershipCallback(room_id=room.id)
+        )
         builder.button(text="Close Room", callback_data=CloseRoomAskCallback(room_id=room.id))
     builder.button(text="Back", callback_data=MenuCallback())
     builder.adjust(1)
@@ -108,6 +117,41 @@ def buy_in_amount_keyboard(room_id: int) -> InlineKeyboardMarkup:
         )
     builder.button(text="Other", callback_data=BuyInOtherCallback(room_id=room_id))
     builder.adjust(3, 2, 1)
+    return builder.as_markup()
+
+
+def play_hours_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for hours in PRESET_PLAY_HOURS:
+        builder.button(text=f"{hours}h", callback_data=PlayHoursCallback(hours=hours))
+    builder.button(text="Enter", callback_data=PlayHoursOtherCallback())
+    builder.button(text="Cancel", callback_data=MenuCallback())
+    builder.adjust(len(PRESET_PLAY_HOURS), 1, 1)
+    return builder.as_markup()
+
+
+def ownership_candidates_keyboard(room_id: int, candidates: list[User]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for user in candidates:
+        builder.button(
+            text=user.display_name,
+            callback_data=TransferOwnershipPickCallback(
+                room_id=room_id, telegram_id=user.telegram_id
+            ),
+        )
+    builder.button(text="Cancel", callback_data=RoomCallback(room_id=room_id))
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def transfer_ownership_confirm_keyboard(room_id: int, telegram_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Yes, hand it over",
+        callback_data=TransferOwnershipConfirmCallback(room_id=room_id, telegram_id=telegram_id),
+    )
+    builder.button(text="Cancel", callback_data=RoomCallback(room_id=room_id))
+    builder.adjust(1)
     return builder.as_markup()
 
 

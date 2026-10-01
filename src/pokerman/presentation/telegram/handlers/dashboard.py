@@ -93,7 +93,9 @@ async def show_room_dashboard(
     except DomainError as error:
         await callback.answer(describe_error(error), show_alert=True)
         return
-    await safe_edit_text(callback.message, format_dashboard(dashboard), reply_markup=keyboard)
+    await safe_edit_text(
+        callback.message, format_dashboard(dashboard, deps.timezone), reply_markup=keyboard
+    )
     await callback.answer()
 
 
@@ -113,7 +115,7 @@ async def cmd_dashboard(message: Message, deps: Deps) -> None:
     except DomainError as error:
         await message.answer(describe_error(error))
         return
-    await message.answer(format_dashboard(dashboard), reply_markup=keyboard)
+    await message.answer(format_dashboard(dashboard, deps.timezone), reply_markup=keyboard)
 
 
 @router.message(Command("history"))

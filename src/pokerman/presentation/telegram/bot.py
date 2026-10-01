@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -20,7 +22,11 @@ def build_bot(token: str) -> Bot:
 
 
 def build_dispatcher(
-    *, session_factory: async_sessionmaker[AsyncSession], bot_username: str, default_currency: str
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    bot_username: str,
+    default_currency: str,
+    timezone: ZoneInfo,
 ) -> Dispatcher:
     dispatcher = Dispatcher()
     dispatcher.include_router(room_admin.router)
@@ -34,5 +40,6 @@ def build_dispatcher(
         session_factory=session_factory,
         bot_username=bot_username,
         default_currency=default_currency,
+        timezone=timezone,
     )
     return dispatcher

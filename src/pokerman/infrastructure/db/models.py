@@ -50,6 +50,7 @@ class PokerRoomModel(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    planned_duration_hours: Mapped[int | None]
 
 
 Index(

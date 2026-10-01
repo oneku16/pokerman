@@ -1,10 +1,10 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from pokerman.domain.entities import PokerRoom
 from pokerman.domain.enums import RoomStatus
-from pokerman.domain.errors import RoomClosedError
+from pokerman.domain.errors import InvalidOwnershipTransferError, RoomClosedError
 from pokerman.domain.value_objects import RoomCode
 
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
@@ -109,3 +109,52 @@ class TestPokerRoomEnsureActive:
 
         with pytest.raises(RoomClosedError):
             room.ensure_active()
+
+
+class TestPokerRoomPlannedDuration:
+    def test_defaults_to_no_planned_duration(self) -> None:
+        room = make_room()
+
+        assert room.planned_duration_hours is None
+        assert room.planned_end_at is None
+
+    def test_planned_end_is_creation_time_plus_hours(self) -> None:
+        room = make_room(planned_duration_hours=4)
+
+        assert room.planned_duration_hours == 4
+        assert room.planned_end_at == NOW + timedelta(hours=4)
+
+    @pytest.mark.parametrize("hours", [0, -1, 25])
+    def test_rejects_out_of_range_duration(self, hours: int) -> None:
+        with pytest.raises(ValueError, match="between 1 and 24"):
+            make_room(planned_duration_hours=hours)
+
+
+class TestPokerRoomTransferOwnership:
+    def test_new_admin_takes_over(self) -> None:
+        room = make_room(admin_telegram_id=1)
+
+        room.transfer_ownership(2)
+
+        assert room.admin_telegram_id == 2
+
+    def test_clears_the_previous_hosts_qr(self) -> None:
+        room = make_room(admin_telegram_id=1)
+        room.set_qr("old-host-qr")
+
+        room.transfer_ownership(2)
+
+        assert room.qr_file_id is None
+
+    def test_cannot_transfer_to_current_admin(self) -> None:
+        room = make_room(admin_telegram_id=1)
+
+        with pytest.raises(InvalidOwnershipTransferError):
+            room.transfer_ownership(1)
+
+    def test_cannot_transfer_closed_room(self) -> None:
+        room = make_room(admin_telegram_id=1)
+        room.close(LATER)
+
+        with pytest.raises(RoomClosedError):
+            room.transfer_ownership(2)

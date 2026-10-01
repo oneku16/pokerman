@@ -7,12 +7,14 @@ from pokerman.domain.enums import BuyInStatus, RoomStatus
 from pokerman.domain.errors import (
     CashOutAlreadyRecordedError,
     InvalidBuyInStateError,
+    InvalidOwnershipTransferError,
     RoomClosedError,
     SpendingLimitChangeTooSoonError,
 )
 from pokerman.domain.value_objects import RoomCode
 
 SPENDING_LIMIT_COOLDOWN = timedelta(days=7)
+MAX_PLANNED_DURATION_HOURS = 24
 
 
 @dataclass(slots=True)
@@ -138,12 +140,25 @@ class PokerRoom:
     qr_file_id: str | None
     created_at: datetime
     closed_at: datetime | None = None
+    planned_duration_hours: int | None = None
 
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("room name must not be blank")
         if self.default_buy_in_amount <= 0:
             raise ValueError("default buy-in amount must be positive")
+        if self.planned_duration_hours is not None and not (
+            1 <= self.planned_duration_hours <= MAX_PLANNED_DURATION_HOURS
+        ):
+            raise ValueError(
+                f"planned duration must be between 1 and {MAX_PLANNED_DURATION_HOURS} hours"
+            )
+
+    @property
+    def planned_end_at(self) -> datetime | None:
+        if self.planned_duration_hours is None:
+            return None
+        return self.created_at + timedelta(hours=self.planned_duration_hours)
 
     @classmethod
     def open(
@@ -156,6 +171,7 @@ class PokerRoom:
         currency: str,
         admin_telegram_id: int,
         now: datetime,
+        planned_duration_hours: int | None = None,
     ) -> PokerRoom:
         return cls(
             id=None,
@@ -168,6 +184,7 @@ class PokerRoom:
             status=RoomStatus.ACTIVE,
             qr_file_id=None,
             created_at=now,
+            planned_duration_hours=planned_duration_hours,
         )
 
     def ensure_active(self) -> None:
@@ -183,6 +200,16 @@ class PokerRoom:
         if amount <= 0:
             raise ValueError("default buy-in amount must be positive")
         self.default_buy_in_amount = amount
+
+    def transfer_ownership(self, new_admin_telegram_id: int) -> None:
+        self.ensure_active()
+        if new_admin_telegram_id == self.admin_telegram_id:
+            raise InvalidOwnershipTransferError(
+                f"user {new_admin_telegram_id} already owns room {self.id}"
+            )
+        self.admin_telegram_id = new_admin_telegram_id
+        # The QR is where players send money, so it belongs to the outgoing host.
+        self.qr_file_id = None
 
     def close(self, now: datetime) -> None:
         self.ensure_active()

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -13,6 +14,7 @@ class Deps:
     session_factory: async_sessionmaker[AsyncSession]
     bot_username: str
     default_currency: str
+    timezone: ZoneInfo
 
     def uow(self) -> SqlAlchemyUnitOfWork:
         return SqlAlchemyUnitOfWork(self.session_factory)

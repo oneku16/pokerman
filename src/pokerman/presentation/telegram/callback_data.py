@@ -99,3 +99,25 @@ class SetSpendingLimitCallback(CallbackData, prefix="setlimit"):
 
 class UseSavedQrCallback(CallbackData, prefix="usesavedqr"):
     room_id: int
+
+
+class PlayHoursCallback(CallbackData, prefix="playhrs"):
+    hours: int
+
+
+class PlayHoursOtherCallback(CallbackData, prefix="playhrsoth"):
+    pass
+
+
+class TransferOwnershipCallback(CallbackData, prefix="xfer"):
+    room_id: int
+
+
+class TransferOwnershipPickCallback(CallbackData, prefix="xferpick"):
+    room_id: int
+    telegram_id: int
+
+
+class TransferOwnershipConfirmCallback(CallbackData, prefix="xferok"):
+    room_id: int
+    telegram_id: int

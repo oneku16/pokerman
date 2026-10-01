@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 class CreateRoomStates(StatesGroup):
     waiting_for_name = State()
     waiting_for_buy_in = State()
+    waiting_for_duration = State()
 
 
 class RoomSettingsStates(StatesGroup):

@@ -32,6 +32,25 @@ class TestCreateRoom:
         assert room.qr_file_id is None
         assert uow.committed is True
 
+    async def test_stores_the_planned_duration(self) -> None:
+        uow = FakeUnitOfWork()
+        codes = FakeRoomCodeGenerator(uow.db, codes=["4821"])
+
+        room = await create_room(
+            uow,
+            codes,
+            admin_telegram_id=1,
+            admin_username=None,
+            admin_display_name="Elnazar",
+            name="Room",
+            default_buy_in_amount=500,
+            currency="KGS",
+            planned_duration_hours=5,
+        )
+
+        assert room.planned_duration_hours == 5
+        assert room.planned_end_at is not None
+
     async def test_assigns_a_non_empty_deep_link_token(self) -> None:
         uow = FakeUnitOfWork()
         codes = FakeRoomCodeGenerator(uow.db, codes=["1111"])

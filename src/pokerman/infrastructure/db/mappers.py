@@ -38,6 +38,7 @@ def room_to_domain(model: PokerRoomModel) -> PokerRoom:
         qr_file_id=model.qr_file_id,
         created_at=model.created_at,
         closed_at=model.closed_at,
+        planned_duration_hours=model.planned_duration_hours,
     )
 
 
@@ -52,6 +53,7 @@ def apply_room_to_model(room: PokerRoom, model: PokerRoomModel) -> None:
     model.qr_file_id = room.qr_file_id
     model.created_at = room.created_at
     model.closed_at = room.closed_at
+    model.planned_duration_hours = room.planned_duration_hours
 
 
 def room_player_to_domain(model: RoomPlayerModel) -> RoomPlayer:

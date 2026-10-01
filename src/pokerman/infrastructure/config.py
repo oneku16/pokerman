@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +13,7 @@ class Settings(BaseSettings):
     telegram_webhook_secret: str
     public_base_url: str
     default_currency: str = "KGS"
+    timezone: str = "Asia/Bishkek"
 
     @field_validator("database_url")
     @classmethod
@@ -18,6 +21,12 @@ class Settings(BaseSettings):
         for prefix in ("postgresql://", "postgres://"):
             if value.startswith(prefix):
                 return "postgresql+asyncpg://" + value[len(prefix) :]
+        return value
+
+    @field_validator("timezone")
+    @classmethod
+    def _validate_timezone(cls, value: str) -> str:
+        ZoneInfo(value)
         return value
 
     @field_validator("public_base_url")

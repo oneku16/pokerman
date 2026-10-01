@@ -4,6 +4,7 @@ from pokerman.domain.errors import (
     DomainError,
     DuplicateMembershipError,
     InvalidBuyInStateError,
+    InvalidOwnershipTransferError,
     NotRoomMemberError,
     RoomClosedError,
     RoomCodeExhaustedError,
@@ -28,6 +29,7 @@ _MESSAGES: dict[type[DomainError], str] = {
     UnauthorizedActionError: "Only the room's admin can do that.",
     RoomCodeExhaustedError: "Couldn't generate a room code right now. Please try again.",
     UserNotFoundError: "Send /start first so I know who you are.",
+    InvalidOwnershipTransferError: "That player already owns this room.",
 }
 
 

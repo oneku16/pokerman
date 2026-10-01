@@ -2,6 +2,7 @@ import hmac
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from zoneinfo import ZoneInfo
 
 from aiogram.types import BotCommand, Update
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -27,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             session_factory=session_factory,
             bot_username=settings.telegram_bot_username,
             default_currency=settings.default_currency,
+            timezone=ZoneInfo(settings.timezone),
         )
         app.state.bot = bot
         app.state.dispatcher = dispatcher

@@ -16,6 +16,7 @@ async def create_room(
     name: str,
     default_buy_in_amount: int,
     currency: str,
+    planned_duration_hours: int | None = None,
 ) -> PokerRoom:
     async with uow:
         await upsert_user(
@@ -36,6 +37,7 @@ async def create_room(
                 currency=currency,
                 admin_telegram_id=admin_telegram_id,
                 now=now,
+                planned_duration_hours=planned_duration_hours,
             )
         )
         assert room.id is not None
